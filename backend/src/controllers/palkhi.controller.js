@@ -18,7 +18,6 @@ export async function getPalkhiTracking(req, res, next) {
     let { data, error } = await query;
 
     if (error || !data || data.length === 0) {
-      // Fallback query without is_published filter if column isn't present in DB schema cache
       const { data: allData } = await client.from('palkhi_tracking').select('*').order('updated_at', { ascending: false });
       data = (allData || []).filter((item) => {
         if (publishedStateMap.has(item.id)) {
@@ -36,7 +35,6 @@ export async function getPalkhiTracking(req, res, next) {
     }
 
     if (!data || data.length === 0) {
-      // Fallback demo stage data for backward compatibility
       return res.json({
         id: 'PALKHI-DEMO-001',
         name: 'Sant Dnyaneshwar Maharaj Palkhi',
@@ -94,7 +92,7 @@ export async function updatePalkhiLocation(req, res, next) {
 
     // Server-side authorization check: Must be Admin OR assigned location operator for this exact Palkhi
     const isAssignedOperator = (req.user.role === 'palkhi_operator' || req.user.role === 'dindi_leader') && 
-      (palkhi.assigned_operator_id === req.user.id || palkhi.last_updated_by === req.user.id || req.user.id === '00000000-0000-0000-0000-000000000002');
+      (palkhi.assigned_operator_id === req.user.id || palkhi.last_updated_by === req.user.id);
     const isAdmin = req.user.role === 'admin';
 
     if (!isAdmin && !isAssignedOperator) {

@@ -488,3 +488,31 @@ VALUES
   ('00000000-0000-0000-0000-000000000107', 'Phaltan (फलटण)', 7, 17.9877, 74.4312, true),
   ('00000000-0000-0000-0000-000000000108', 'Pandharpur (पंढरपूर धाम)', 8, 17.6777, 75.3283, true)
 ON CONFLICT (id) DO NOTHING;
+
+-- Automatic Profile Provisioning Trigger for auth.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = new.id) THEN
+    INSERT INTO public.profiles (id, email, display_name, role, status)
+    VALUES (
+      new.id,
+      new.email,
+      COALESCE(
+        new.raw_user_meta_data->>'full_name',
+        new.raw_user_meta_data->>'display_name',
+        split_part(new.email, '@', 1)
+      ),
+      'pilgrim',
+      'active'
+    );
+  END IF;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+

@@ -14,7 +14,7 @@ export async function getAllServices(req, res, next) {
       query = query.eq('is_verified', true);
     }
     if (category) {
-      query = query.ilike('category', category);
+      query = query.eq('category', category);
     }
     if (status) {
       query = query.eq('availability_status', status);

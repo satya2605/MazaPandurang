@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../common/constants/app_colors.dart';
 import '../../../common/navigation/app_routes.dart';
 import '../auth_service.dart';
@@ -13,120 +14,143 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+
+  bool _isSignUpMode = false;
   bool _isLoading = false;
+  String? _errorMessage;
   final AuthService _authService = AuthService();
 
-  final List<Map<String, String>> _devPersonas = [
-    {
-      'name': 'Satyajit',
-      'role': 'Pilgrim',
-      'email': 'satyajit@mazapandurang.local',
-      'uuid': '00000000-0000-0000-0000-000000000001',
-    },
-    {
-      'name': 'Sanket',
-      'role': 'Dindi Leader',
-      'email': 'sanket@mazapandurang.local',
-      'uuid': '00000000-0000-0000-0000-000000000002',
-    },
-    {
-      'name': 'Yogeshwari',
-      'role': 'Police',
-      'email': 'yogeshwari@mazapandurang.local',
-      'uuid': '00000000-0000-0000-0000-000000000003',
-    },
-    {
-      'name': 'Shrutika',
-      'role': 'NGO',
-      'email': 'shrutika@mazapandurang.local',
-      'uuid': '00000000-0000-0000-0000-000000000004',
-    },
-    {
-      'name': 'Gauri',
-      'role': 'Citizen',
-      'email': 'gauri@mazapandurang.local',
-      'uuid': '00000000-0000-0000-0000-000000000005',
-    },
-    {
-      'name': 'Admin',
-      'role': 'Admin',
-      'email': 'admin@mazapandurang.local',
-      'uuid': '00000000-0000-0000-0000-000000000006',
-    },
-  ];
-
-  void _fillPersona(Map<String, String> persona) {
-    _emailController.text = persona['email']!;
-    _passwordController.text = 'Wari2026!Demo';
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleEmailAuth() async {
     final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
 
-    if (email.isEmpty) {
-      _showMessage('Please enter an email address');
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Please enter email and password.');
       return;
     }
 
-    setState(() => _isLoading = true);
+    if (_isSignUpMode && password.length < 6) {
+      setState(() => _errorMessage = 'Password must be at least 6 characters.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      // For dev personas using .local, route directly based on profile
-      final persona = _devPersonas.firstWhere(
-        (p) => p['email'] == email,
-        orElse: () => {},
-      );
-
-      if (persona.isNotEmpty) {
-        _navigateByRole(persona['role']!.toLowerCase().replaceAll(' ', '_'), 'active');
-        return;
+      Map<String, dynamic>? profile;
+      if (_isSignUpMode) {
+        profile = await _authService.signUpWithEmailPassword(
+          email: email,
+          password: password,
+          displayName: name.isNotEmpty ? name : null,
+        );
+      } else {
+        profile = await _authService.signInWithEmailPassword(
+          email: email,
+          password: password,
+        );
       }
 
-      final profile = await _authService.fetchProfileById(persona.isNotEmpty ? persona['uuid']! : '00000000-0000-0000-0000-000000000001');
-
-      if (profile != null && mounted) {
-        final role = profile['role'] ?? 'local_citizen';
-        final status = profile['status'] ?? 'active';
-        _navigateByRole(role, status);
-      } else if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.pilgrim);
+      if (mounted) {
+        if (profile != null) {
+          _routeUserByProfile(profile);
+        } else {
+          // If auth succeeded but profile lookup pending, default route to pilgrim
+          Navigator.pushReplacementNamed(context, AppRoutes.pilgrim);
+        }
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = e.message);
       }
     } catch (e) {
-      _showMessage('Login failed: $e');
+      if (mounted) {
+        setState(() => _errorMessage = 'Authentication failed: $e');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _navigateByRole(String role, String status) {
-    if (role == 'admin') {
-      Navigator.pushReplacementNamed(context, AppRoutes.admin);
-    } else if (role == 'dindi_leader') {
-      if (status == 'pending') {
-        _showDindiStatusDialog('Your Dindi Leader application is awaiting Admin approval.');
-      } else if (status == 'rejected') {
-        _showDindiStatusDialog('Your Dindi Leader application was not approved.');
-      } else if (status == 'suspended') {
-        _showDindiStatusDialog('Your Dindi Leader access has been suspended.');
-      } else {
-        Navigator.pushReplacementNamed(context, AppRoutes.dindi);
+  Future<void> _handleGoogleAuth() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await _authService.signInWithGoogle();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Google Sign-In failed: $e');
       }
-    } else if (role == 'police_authority' || role == 'police') {
-      Navigator.pushReplacementNamed(context, AppRoutes.police);
-    } else if (role == 'ngo_volunteer' || role == 'ngo') {
-      Navigator.pushReplacementNamed(context, AppRoutes.ngo);
-    } else if (role == 'local_citizen' || role == 'citizen') {
-      Navigator.pushReplacementNamed(context, AppRoutes.citizen);
-    } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.pilgrim);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showDindiStatusDialog(String message) {
+  void _routeUserByProfile(Map<String, dynamic> profile) {
+    final String role = (profile['role'] ?? 'pilgrim').toString().toLowerCase();
+    final String status = (profile['status'] ?? 'active').toString().toLowerCase();
+
+    if (status == 'suspended') {
+      _showStatusAlert('Account Suspended', 'Your account has been suspended by platform administration.');
+      return;
+    }
+
+    switch (role) {
+      case 'admin':
+        Navigator.pushReplacementNamed(context, AppRoutes.admin);
+        break;
+      case 'dindi_leader':
+        if (status == 'pending') {
+          _showStatusAlert('Dindi Leader Application Pending', 'Your Dindi Leader application is awaiting Admin approval.');
+        } else if (status == 'rejected') {
+          _showStatusAlert('Application Not Approved', 'Your Dindi Leader application was not approved by Admin.');
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.dindi);
+        }
+        break;
+      case 'police_authority':
+      case 'police':
+        Navigator.pushReplacementNamed(context, AppRoutes.police);
+        break;
+      case 'ngo_volunteer':
+      case 'ngo':
+        Navigator.pushReplacementNamed(context, AppRoutes.ngo);
+        break;
+      case 'local_citizen':
+      case 'citizen':
+        Navigator.pushReplacementNamed(context, AppRoutes.citizen);
+        break;
+      case 'palkhi_operator':
+        Navigator.pushReplacementNamed(context, AppRoutes.pilgrim);
+        break;
+      case 'pilgrim':
+      default:
+        Navigator.pushReplacementNamed(context, AppRoutes.pilgrim);
+        break;
+    }
+  }
+
+  void _showStatusAlert(String title, String message) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Dindi Leader Status'),
+        title: Text(title),
         content: Text(message),
         actions: [
           TextButton(
@@ -141,84 +165,197 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _showMessage(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Maza Pandurang Login'),
-      ),
+      backgroundColor: Colors.grey[50],
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Supabase Auth Sign In',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Sign in with your registered email and password',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email Address',
-                  prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder(),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(28.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Logo & Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.temple_hindu, color: AppColors.primary, size: 36),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'माझा पांडुरंग',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _isSignUpMode ? 'Create a new pilgrim account' : 'Sign in to access your Wari dashboard',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Error Alert Banner
+                      if (_errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(color: Colors.red, fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Sign Up Display Name Field
+                      if (_isSignUpMode) ...[
+                        TextField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Full Name',
+                            prefixIcon: Icon(Icons.person_outline),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // Email Field
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Email Address',
+                          prefixIcon: Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Password Field
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock_outline),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Primary Action Button (Sign In / Sign Up)
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _handleEmailAuth,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text(
+                                _isSignUpMode ? 'Create Account' : 'Sign In',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Divider Or
+                      Row(
+                        children: const [
+                          Expanded(child: Divider()),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('OR', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          ),
+                          Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Google Sign In Button
+                      OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _handleGoogleAuth,
+                        icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.red),
+                        label: const Text(
+                          'Continue with Google',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: BorderSide(color: Colors.grey[300]!),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Toggle Sign In / Sign Up Mode
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _isSignUpMode ? 'Already have an account?' : "Don't have an account?",
+                            style: const TextStyle(fontSize: 13, color: Colors.black54),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isSignUpMode = !_isSignUpMode;
+                                _errorMessage = null;
+                              });
+                            },
+                            child: Text(
+                              _isSignUpMode ? 'Sign In' : 'Sign Up',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Sign In'),
-                ),
-              ),
-              const SizedBox(height: 28),
-              const Divider(),
-              const SizedBox(height: 12),
-              const Text(
-                '⚡ Quick Dev Switcher (6 Personas)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _devPersonas.map((p) {
-                  return ActionChip(
-                    avatar: const Icon(Icons.person, size: 16),
-                    label: Text('${p['name']} (${p['role']})'),
-                    onPressed: () {
-                      _fillPersona(p);
-                      _handleLogin();
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
+            ),
           ),
         ),
       ),

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticateJwt } from '../middleware/auth.js';
 import {
   getAllNgos,
   getNgoById,
@@ -13,10 +14,10 @@ const router = Router();
 
 router.get('/', getAllNgos);
 router.get('/:id', getNgoById);
-router.post('/', createNgo);
-router.patch('/:id', updateNgo);
+router.post('/', authenticateJwt, createNgo);
+router.patch('/:id', authenticateJwt, updateNgo);
 router.get('/:id/images', getNgoImages);
-router.post('/:id/images', addNgoImage);
-router.delete('/:id/images/:imageId', deleteNgoImage);
+router.post('/:id/images', authenticateJwt, addNgoImage);
+router.delete('/:id/images/:imageId', authenticateJwt, deleteNgoImage);
 
 export default router;

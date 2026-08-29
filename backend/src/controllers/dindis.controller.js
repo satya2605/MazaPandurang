@@ -141,8 +141,7 @@ export async function createDindi(req, res, next) {
       req.body.leaderUserId ||
       req.body.leader_id ||
       req.body.leaderId ||
-      req.query.leader_id ||
-      '00000000-0000-0000-0000-000000000002';
+      req.query.leader_id;
     const memberCount = req.body.memberCount || req.body.member_count || 1;
     const currentLocationName =
       req.body.currentLocationName || req.body.current_location_name || 'Alandi';

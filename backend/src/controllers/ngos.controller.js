@@ -48,7 +48,10 @@ export async function createNgo(req, res, next) {
   try {
     const { user_id, name, registration_number, contact_person, phone, email, primary_category } = req.body;
     const client = getSupabaseClient();
-    const effectiveUserId = req.user?.id || user_id || '00000000-0000-0000-0000-000000000004';
+    const effectiveUserId = req.user?.id || user_id;
+    if (!effectiveUserId) {
+      return res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: 'Authentication required' } });
+    }
 
     // Ensure profile exists in profiles table
     const { data: existingProfile } = await client.from('profiles').select('id').eq('id', effectiveUserId).maybeSingle();

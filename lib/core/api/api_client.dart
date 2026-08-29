@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../auth/auth_service.dart';
 
+/// Shared API Client that automatically attaches Supabase JWT access tokens
+/// for authenticated requests to the Express backend gateway.
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
@@ -16,18 +18,10 @@ class ApiClient {
       'Accept': 'application/json',
     };
 
-    final profile = _authService.currentProfile;
-    if (profile != null && profile['id'] != null) {
-      headers['x-user-id'] = profile['id'].toString();
-      if (profile['role'] == 'admin') {
-        headers['x-admin-id'] = profile['id'].toString();
-        headers['x-admin-role'] = 'admin';
-      }
-    } else {
-      // Dev & test fallback headers for unauthenticated local development access
-      headers['x-user-id'] = '00000000-0000-0000-0000-000000000003';
-      headers['x-admin-id'] = '00000000-0000-0000-0000-000000000003';
-      headers['x-admin-role'] = 'admin';
+    // Attach verified Supabase JWT bearer token
+    final token = _authService.accessToken;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
     }
 
     if (extraHeaders != null) {

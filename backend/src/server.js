@@ -78,7 +78,7 @@ app.use(errorHandler);
 
 const PORT = config.port;
 
-if (process.env.NODE_ENV !== 'test' && !process.env.NO_LISTEN) {
+if (process.env.NODE_ENV !== 'test' && process.env.NO_LISTEN !== 'true') {
   app.listen(PORT, () => {
     console.log(`\n========================================================`);
     console.log(` 🚩 Maza Pandurang Shared REST API Server running on port ${PORT}`);

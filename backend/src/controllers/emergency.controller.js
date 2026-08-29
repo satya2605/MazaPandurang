@@ -19,8 +19,12 @@ export async function getAllEmergencies(req, res, next) {
     // Pilgrims can strictly read ONLY their own emergency requests
     if (req.user && req.user.role === 'pilgrim') {
       query = query.eq('requester_id', req.user.id);
-    } else if (req.query.requester_id) {
-      query = query.eq('requester_id', req.query.requester_id);
+    } else if (req.user && (req.user.role === 'police_authority' || req.user.role === 'admin')) {
+      if (req.query.requester_id) {
+        query = query.eq('requester_id', req.query.requester_id);
+      }
+    } else if (req.user) {
+      query = query.eq('requester_id', req.user.id);
     }
 
     if (status) {
@@ -41,12 +45,13 @@ export async function createEmergency(req, res, next) {
     const client = getSupabaseClient();
 
     // SERVER-SIDE IDENTITY: Always derive requester_id from verified JWT
-    const requesterId = req.user?.id || req.body.requester_id;
-    if (!requesterId) {
+    if (!req.user || !req.user.id) {
       return res.status(401).json({
         error: { code: 'UNAUTHENTICATED', message: 'User identity required from Supabase JWT' },
       });
     }
+
+    const requesterId = req.user.id;
 
     const payload = {
       request_code: `EMG-${Date.now()}`,
@@ -81,6 +86,15 @@ export async function updateEmergency(req, res, next) {
     const { id } = req.params;
     const { status } = req.body;
     const client = getSupabaseClient();
+
+    if (!req.user || (req.user.role !== 'police_authority' && req.user.role !== 'admin')) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Only Police Authority or Admin can update emergency request status.',
+        },
+      });
+    }
 
     // Ensure status is valid enum
     const validStatuses = ['pending', 'dispatched', 'resolved', 'cancelled'];
