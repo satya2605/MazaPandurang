@@ -15,6 +15,14 @@ class NgoRepository extends ChangeNotifier {
     _reports = List.from(NgoMockData.initialReports);
   }
 
+  /// Reset state to default initial mock data for unit tests
+  void resetForTesting() {
+    _organization = NgoMockData.defaultOrganization;
+    _services = List.from(NgoMockData.initialServices);
+    _reports = List.from(NgoMockData.initialReports);
+    notifyListeners();
+  }
+
   late NgoOrganization _organization;
   late List<NgoService> _services;
   late List<ServiceReport> _reports;
