@@ -13,7 +13,10 @@
 - **Working On**: Seva Registration Flow
 - **Blocked**: No
 - **Needs Communication**: No
-- **Last Updated**: 2026-08-29 22:27:00 IST
+- **Last Updated**: 2026-08-29 22:46:00 IST
 
-## Platform Coordination Notice (DEC-2026-08-29-011)
-- **Emergency Integration**: Medical SOS links to verified Seva facilities (`is_verified = true AND is_active = true`). All NGO medical camps must continue through Admin approval.
+## Platform Coordination Notice (DEC-2026-08-29-012)
+- **NGO Admin Integration**: Admin Control Plane is integrating with the existing NGO registration workflow (`POST /api/ngos`).
+- Submissions populate canonical `ngos` (`status = 'pending'`).
+- Admin approval via `PATCH /api/admin/ngos/:id/approve` sets `status = 'approved'`, exposing the NGO on public `GET /api/ngos`.
+- No changes to `lib/modules/ngo/` were made.

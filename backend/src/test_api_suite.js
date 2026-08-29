@@ -215,7 +215,128 @@ async function runTestSuite() {
     if (adminPatchEmg.status !== 200 || adminPatchEmg.json.status !== 'dispatched') throw new Error(`Expected 200 for Admin/Police emergency status dispatch, got ${adminPatchEmg.status}`);
     console.log('[PASS 33] PATCH /api/emergencies/:id (Admin/Police Authorized) -> Status 200 (Status: dispatched)');
 
-    console.log('\n🎉 ALL 33 MASTER PLATFORM & EMERGENCY API TESTS PASSED CLEANLY!\n');
+    // 34. NGO Submission via POST /api/ngos -> 201 (Starts Pending)
+    const uniqueUserId = `00000000-0000-0000-0000-${Date.now().toString().slice(-12)}`;
+    const newNgo = await request('/api/ngos', {
+      method: 'POST',
+      body: {
+        user_id: uniqueUserId,
+        name: 'Seva Samarpan Trust',
+        registration_number: `NGO-REG-${Date.now()}`,
+        contact_person: 'Shrutika Volunteer',
+        phone: '+919876543210',
+        email: 'shrutika@ngo.org',
+        primary_category: 'Medical & Food Seva'
+      }
+    });
+    if (newNgo.status !== 201 || newNgo.json.status !== 'pending') throw new Error(`Expected 201 for NGO creation, got ${newNgo.status}`);
+    const createdNgoId = newNgo.json.id;
+    console.log(`[PASS 34] POST /api/ngos -> Status 201 (Pending NGO ID: ${createdNgoId})`);
+
+    // 35. Admin Querying Pending NGOs -> 200
+    const adminNgos = await request('/api/admin/ngos?status=pending', {
+      method: 'GET',
+      headers: adminHeaders
+    });
+    if (adminNgos.status !== 200 || !Array.isArray(adminNgos.json)) throw new Error(`Expected 200 for Admin NGO retrieval`);
+    const foundPendingNgo = adminNgos.json.some(n => n.id === createdNgoId);
+    if (!foundPendingNgo) throw new Error(`Pending NGO ${createdNgoId} not found in admin retrieval`);
+    console.log('[PASS 35] GET /api/admin/ngos?status=pending -> Status 200 (Found Pending NGO)');
+
+    // 36. Public GET /api/ngos excludes Pending NGO
+    const publicNgosBeforeApprove = await request('/api/ngos', { method: 'GET' });
+    const isPublicBefore = publicNgosBeforeApprove.json.some(n => n.id === createdNgoId);
+    if (isPublicBefore) throw new Error(`Pending NGO ${createdNgoId} must NOT be public`);
+    console.log('[PASS 36] Security: Public GET /api/ngos excludes Pending NGO');
+
+    // 37. Admin Approves NGO -> 200
+    const approveNgoRes = await request(`/api/admin/ngos/${createdNgoId}/approve`, {
+      method: 'PATCH',
+      headers: adminHeaders
+    });
+    if (approveNgoRes.status !== 200 || approveNgoRes.json.status !== 'approved') throw new Error(`Expected 200 for NGO approval, got ${approveNgoRes.status}`);
+    console.log('[PASS 37] PATCH /api/admin/ngos/:id/approve -> Status 200 (Status: approved)');
+
+    // 38. Public GET /api/ngos includes Approved NGO
+    const publicNgosAfterApprove = await request('/api/ngos', { method: 'GET' });
+    const isPublicAfter = publicNgosAfterApprove.json.some(n => n.id === createdNgoId);
+    if (!isPublicAfter) throw new Error(`Approved NGO ${createdNgoId} must be public`);
+    console.log('[PASS 38] Public GET /api/ngos includes Approved NGO');
+
+    // 39. Admin Rejects NGO -> 200
+    const rejectNgoRes = await request(`/api/admin/ngos/${createdNgoId}/reject`, {
+      method: 'PATCH',
+      headers: adminHeaders,
+      body: { reason: 'Incomplete compliance documentation' }
+    });
+    if (rejectNgoRes.status !== 200 || rejectNgoRes.json.status !== 'rejected') throw new Error(`Expected 200 for NGO rejection`);
+    console.log('[PASS 39] PATCH /api/admin/ngos/:id/reject -> Status 200 (Status: rejected)');
+
+    // 40. Public GET /api/ngos excludes Rejected NGO
+    const publicNgosAfterReject = await request('/api/ngos', { method: 'GET' });
+    if (publicNgosAfterReject.json.some(n => n.id === createdNgoId)) throw new Error(`Rejected NGO must NOT be public`);
+    console.log('[PASS 40] Security: Public GET /api/ngos excludes Rejected NGO');
+
+    // 41. Dindi Leader Application -> 201
+    const leaderApp = await request('/api/dindi-leader/apply', {
+      method: 'POST',
+      headers: dindiLeaderHeaders,
+      body: {
+        dindi_name: 'Pandharpur Varkari Mandal',
+        start_point: 'Dehu',
+        destination: 'Pandharpur',
+        expected_members: 150,
+        phone: '+919811122233'
+      }
+    });
+    if (leaderApp.status !== 201 || !leaderApp.json.profile) throw new Error(`Expected 201 for Dindi Leader application, got ${leaderApp.status}`);
+    const applicantId = leaderApp.json.profile.id;
+    console.log(`[PASS 41] POST /api/dindi-leader/apply -> Status 201 (Applicant ID: ${applicantId})`);
+
+    // 42. Admin Querying Pending Dindi Leaders -> 200
+    const adminLeaders = await request('/api/admin/dindi-leaders?status=pending', {
+      method: 'GET',
+      headers: adminHeaders
+    });
+    if (adminLeaders.status !== 200 || !Array.isArray(adminLeaders.json)) throw new Error(`Expected 200 for admin Dindi Leaders query`);
+    console.log('[PASS 42] GET /api/admin/dindi-leaders?status=pending -> Status 200');
+
+    // 43. Admin Approves Dindi Leader -> 200 (Sets profiles.status = 'active')
+    const approveLeaderRes = await request(`/api/admin/dindi-leaders/${applicantId}/approve`, {
+      method: 'PATCH',
+      headers: adminHeaders
+    });
+    if (approveLeaderRes.status !== 200 || approveLeaderRes.json.status !== 'active') throw new Error(`Expected 200 for Dindi Leader approval`);
+    console.log('[PASS 43] PATCH /api/admin/dindi-leaders/:id/approve -> Status 200 (profile.status: active)');
+
+    // 44. Dindi Creation by Active Leader -> 201 (Starts Pending)
+    const newDindiRes = await request('/api/dindis', {
+      method: 'POST',
+      headers: dindiLeaderHeaders,
+      body: {
+        name: 'Sant Tukaram Maharaj Dindi No. 12',
+        start_point: 'Dehu',
+        destination: 'Pandharpur',
+        member_count: 250
+      }
+    });
+    if (newDindiRes.status !== 201 || newDindiRes.json.status !== 'Pending') throw new Error(`Expected 201 for Dindi creation, got ${newDindiRes.status}`);
+    const newlyCreatedDindiId = newDindiRes.json.id;
+    console.log(`[PASS 44] POST /api/dindis -> Status 201 (Pending Dindi ID: ${newlyCreatedDindiId})`);
+
+    // 45. Admin Approves Dindi -> 200 (Sets dindis.status = 'Active') & Public Exposure Verified
+    const approveDindiRes = await request(`/api/admin/dindis/${newlyCreatedDindiId}/approve`, {
+      method: 'PATCH',
+      headers: adminHeaders
+    });
+    if (approveDindiRes.status !== 200 || approveDindiRes.json.status !== 'Active') throw new Error(`Expected 200 for Dindi approval`);
+    
+    const publicDindisEnd = await request('/api/dindis', { method: 'GET' });
+    const isDindiPublic = publicDindisEnd.json.some(d => d.id === newlyCreatedDindiId);
+    if (!isDindiPublic) throw new Error(`Approved Dindi ${newlyCreatedDindiId} must be public`);
+    console.log('[PASS 45] PATCH /api/admin/dindis/:id/approve -> Status 200 & Public GET /api/dindis exposes Active Dindi');
+
+    console.log('\n🎉 ALL 45 MASTER PLATFORM & PROVIDER INTEGRATION TESTS PASSED CLEANLY!\n');
   } catch (err) {
     console.error('❌ Test suite failed:', err);
     process.exitCode = 1;

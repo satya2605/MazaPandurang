@@ -489,9 +489,6 @@ export async function approveDindiLeader(req, res, next) {
 
     if (error) throw error;
 
-    // Automatically approve corresponding pending Dindi if present
-    await client.from('dindis').update({ status: 'Active' }).eq('leader_id', id);
-
     await recordAuditLog(req.user?.id || req.adminUser?.id, 'APPROVE_DINDI_LEADER', 'profile', id);
     res.json(data);
   } catch (err) {
