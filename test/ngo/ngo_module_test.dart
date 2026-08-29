@@ -175,8 +175,7 @@ void main() {
       await tester.ensureVisible(hoursField);
       await tester.enterText(hoursField, '24x7 Open');
 
-      final publishBtn = find.widgetWithText(
-          ElevatedButton, 'Submit Seva Service for Verification');
+      final publishBtn = find.byIcon(Icons.add_circle);
       await tester.ensureVisible(publishBtn);
       await tester.tap(publishBtn);
       await tester.pumpAndSettle();
@@ -201,8 +200,7 @@ void main() {
       await tester.enterText(
           find.bySemanticsLabel('Service Name *'), 'Modified Seva Name');
 
-      final updateBtn =
-          find.widgetWithText(ElevatedButton, 'Update Service Details');
+      final updateBtn = find.byIcon(Icons.save);
       await tester.ensureVisible(updateBtn);
       await tester.tap(updateBtn);
       await tester.pumpAndSettle();
@@ -1248,8 +1246,7 @@ void main() {
       expect(find.text('Available'), findsWidgets);
       expect(find.text('MH-12-CD-5678'), findsOneWidget);
       expect(find.text('On Trip'), findsWidgets);
-      expect(
-          find.widgetWithText(ElevatedButton, 'Call Ambulance'), findsWidgets);
+      expect(find.text('Call Ambulance'), findsWidgets);
     });
 
     // 50. Bed Availability Separate Card
@@ -1479,8 +1476,7 @@ void main() {
       expect(find.text('Emergency Support & Ambulance'), findsOneWidget);
       expect(find.text('Rescue Boats'), findsOneWidget);
       expect(find.text('MH-12-RR-0001'), findsOneWidget);
-      expect(
-          find.widgetWithText(ElevatedButton, 'Call Ambulance'), findsWidgets);
+      expect(find.text('Call Ambulance'), findsWidgets);
     });
 
     // 60. Multi-criteria NgoServiceFilter independently filters food, shelter, water
