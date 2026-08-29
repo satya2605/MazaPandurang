@@ -117,6 +117,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
             ),
             onMapCreated: _onMapCreated,
             trackCameraPosition: true,
+            myLocationEnabled: false,
           )
         else
           Container(
