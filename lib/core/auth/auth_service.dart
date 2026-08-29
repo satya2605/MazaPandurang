@@ -15,7 +15,17 @@ class AuthService extends ChangeNotifier {
   Map<String, dynamic>? _currentProfile;
 
   Map<String, dynamic>? get currentProfile => _currentProfile;
+
+  bool get isSupabaseInitialized {
+    try {
+      return Supabase.instance.client != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   User? get currentUser {
+    if (!isSupabaseInitialized) return null;
     try {
       return Supabase.instance.client.auth.currentUser;
     } catch (_) {
@@ -24,6 +34,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Session? get currentSession {
+    if (!isSupabaseInitialized) return null;
     try {
       return Supabase.instance.client.auth.currentSession;
     } catch (_) {
@@ -36,6 +47,7 @@ class AuthService extends ChangeNotifier {
   bool get isAuthenticated => currentUser != null && _currentProfile != null;
 
   void _initAuthListener() {
+    if (!isSupabaseInitialized) return;
     try {
       Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
         final AuthChangeEvent event = data.event;
@@ -57,6 +69,7 @@ class AuthService extends ChangeNotifier {
 
   /// Restores session on app launch
   Future<void> restoreSession() async {
+    if (!isSupabaseInitialized) return;
     try {
       final user = currentUser;
       if (user != null) {
@@ -72,6 +85,9 @@ class AuthService extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
+    if (!isSupabaseInitialized) {
+      throw Exception('Supabase instance is not initialized');
+    }
     try {
       final AuthResponse res = await Supabase.instance.client.auth.signInWithPassword(
         email: email.trim(),
@@ -97,6 +113,9 @@ class AuthService extends ChangeNotifier {
     required String password,
     String? displayName,
   }) async {
+    if (!isSupabaseInitialized) {
+      throw Exception('Supabase instance is not initialized');
+    }
     try {
       final AuthResponse res = await Supabase.instance.client.auth.signUp(
         email: email.trim(),
@@ -122,6 +141,9 @@ class AuthService extends ChangeNotifier {
 
   /// Continue with Google OAuth
   Future<bool> signInWithGoogle() async {
+    if (!isSupabaseInitialized) {
+      throw Exception('Supabase instance is not initialized');
+    }
     try {
       final bool res = await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
@@ -205,13 +227,14 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    try {
-      await Supabase.instance.client.auth.signOut();
-    } catch (e) {
-      debugPrint('Sign out error: $e');
-    } finally {
-      _currentProfile = null;
-      notifyListeners();
+    if (isSupabaseInitialized) {
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (e) {
+        debugPrint('Sign out error: $e');
+      }
     }
+    _currentProfile = null;
+    notifyListeners();
   }
 }

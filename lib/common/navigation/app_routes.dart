@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../app/role_selector/role_selector_screen.dart';
-import '../../app/module_selector/module_selector_screen.dart';
 import '../../modules/pilgrim/pilgrim_module.dart';
 import '../../modules/dindi/dindi_module.dart';
 import '../../modules/police/police_module.dart';
@@ -8,11 +6,14 @@ import '../../modules/ngo/ngo_module.dart';
 import '../../modules/citizen/citizen_module.dart';
 import '../../modules/admin/admin_module.dart';
 
+import '../../core/auth/auth_gate.dart';
 import '../../core/auth/screens/login_screen.dart';
 
 /// App route definitions and route generator.
 abstract class AppRoutes {
+  static const String root = '/';
   static const String roleSelector = '/';
+  static const String devRoleSelector = '/dev-role-selector';
   static const String devModuleSelector = '/dev-module-selector';
   static const String login = '/login';
 
@@ -24,8 +25,8 @@ abstract class AppRoutes {
   static const String admin = '/admin';
 
   static Map<String, WidgetBuilder> get routes => {
-        roleSelector: (context) => const RoleSelectorScreen(),
-        devModuleSelector: (context) => const ModuleSelectorScreen(),
+        devRoleSelector: (context) => const AuthGate(),
+        devModuleSelector: (context) => const AuthGate(),
         login: (context) => const LoginScreen(),
         pilgrim: (context) => PilgrimModule.screen(),
         dindi: (context) => DindiModule.screen(),

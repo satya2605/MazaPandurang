@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../common/theme/app_theme.dart';
 import '../common/navigation/app_routes.dart';
+import '../core/auth/auth_gate.dart';
 
 class MazaPandurangApp extends StatelessWidget {
   const MazaPandurangApp({super.key});
@@ -11,7 +12,7 @@ class MazaPandurangApp extends StatelessWidget {
       title: 'Maza Pandurang',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      initialRoute: AppRoutes.roleSelector,
+      home: const AuthGate(),
       routes: AppRoutes.routes,
     );
   }

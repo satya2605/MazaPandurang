@@ -17,42 +17,19 @@ void main() {
     await service.loadDindis();
   });
 
-  group('Maza Pandurang Role Selector Tests', () {
-    testWidgets('App launches and renders Role Selector screen with 5 roles',
+  group('Maza Pandurang Root Auth Gate & Launcher Tests', () {
+    testWidgets('App launches with AuthGate rendering LoginScreen when unauthenticated',
         (WidgetTester tester) async {
       await tester.pumpWidget(const MazaPandurangApp());
+      await tester.pump();
+      await tester.pump();
 
-      expect(find.text('Maza Pandurang'), findsOneWidget);
-      expect(find.text('Select Your Role'), findsOneWidget);
-      expect(find.text('Personalise your Wari experience'), findsOneWidget);
-
-      expect(find.text('Pilgrim'), findsOneWidget);
-      expect(find.text('Dindi Leader'), findsOneWidget);
-      expect(find.text('NGO Volunteer'), findsOneWidget);
-      expect(find.text('Police / Authority'), findsOneWidget);
-      expect(find.text('Local Citizen'), findsOneWidget);
-
-      expect(find.text('Continue as Pilgrim'), findsOneWidget);
+      expect(find.text('माझा पांडुरंग'), findsOneWidget);
+      expect(find.text('Sign In'), findsWidgets);
+      expect(find.text('Continue with Google'), findsOneWidget);
     });
 
-    testWidgets('Role selection updates active role button text and navigates',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(const MazaPandurangApp());
-
-      // Tap on Dindi Leader role
-      await tester.tap(find.text('Dindi Leader'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Continue as Dindi Leader'), findsOneWidget);
-
-      // Continue to Dindi Module
-      await tester.tap(find.text('Continue as Dindi Leader'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('My Dindis'), findsOneWidget);
-    });
-
-    testWidgets('Development Module Selector renders all 5 modules',
+    testWidgets('Development Module Selector renders module entries',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(

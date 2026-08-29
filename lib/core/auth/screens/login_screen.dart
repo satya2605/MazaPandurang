@@ -316,13 +316,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Google Sign In Button
                       OutlinedButton.icon(
                         onPressed: _isLoading ? null : _handleGoogleAuth,
-                        icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.red),
+                        icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.red),
                         label: const Text(
                           'Continue with Google',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
                         ),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           side: BorderSide(color: Colors.grey[300]!),
                         ),
@@ -333,9 +334,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            _isSignUpMode ? 'Already have an account?' : "Don't have an account?",
-                            style: const TextStyle(fontSize: 13, color: Colors.black54),
+                          Flexible(
+                            child: Text(
+                              _isSignUpMode ? 'Already have an account?' : "Don't have an account?",
+                              style: const TextStyle(fontSize: 13, color: Colors.black54),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           TextButton(
                             onPressed: () {
