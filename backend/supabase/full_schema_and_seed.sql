@@ -492,7 +492,15 @@ ON CONFLICT (id) DO NOTHING;
 -- Automatic Profile Provisioning Trigger for auth.users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+  user_role_val public.user_role := 'pilgrim'::public.user_role;
+  input_role text;
 BEGIN
+  input_role := new.raw_user_meta_data->>'role';
+  IF input_role IS NOT NULL AND input_role IN ('pilgrim', 'dindi_leader', 'police_authority', 'ngo_volunteer', 'palkhi_operator', 'local_citizen', 'admin') THEN
+    user_role_val := input_role::public.user_role;
+  END IF;
+
   IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = new.id) THEN
     INSERT INTO public.profiles (id, email, display_name, role, status)
     VALUES (
@@ -503,7 +511,7 @@ BEGIN
         new.raw_user_meta_data->>'display_name',
         split_part(new.email, '@', 1)
       ),
-      'pilgrim',
+      user_role_val,
       'active'
     );
   END IF;

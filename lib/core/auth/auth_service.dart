@@ -18,7 +18,8 @@ class AuthService extends ChangeNotifier {
 
   bool get isSupabaseInitialized {
     try {
-      return Supabase.instance.client != null;
+      Supabase.instance.client;
+      return true;
     } catch (_) {
       return false;
     }
@@ -107,11 +108,12 @@ class AuthService extends ChangeNotifier {
     return null;
   }
 
-  /// Sign up with Email and Password (Defaults to pilgrim role)
+  /// Sign up with Email and Password
   Future<Map<String, dynamic>?> signUpWithEmailPassword({
     required String email,
     required String password,
     String? displayName,
+    String? role,
   }) async {
     if (!isSupabaseInitialized) {
       throw Exception('Supabase instance is not initialized');
@@ -123,6 +125,7 @@ class AuthService extends ChangeNotifier {
         data: {
           'full_name': displayName ?? email.split('@')[0],
           'display_name': displayName ?? email.split('@')[0],
+          'role': role ?? 'pilgrim',
         },
       );
 

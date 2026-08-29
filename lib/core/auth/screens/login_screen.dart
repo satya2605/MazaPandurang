@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
 
+  String _selectedRole = 'pilgrim';
   bool _isSignUpMode = false;
   bool _isLoading = false;
   String? _errorMessage;
@@ -56,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
           email: email,
           password: password,
           displayName: name.isNotEmpty ? name : null,
+          role: _selectedRole,
         );
       } else {
         profile = await _authService.signInWithEmailPassword(
@@ -241,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Sign Up Display Name Field
+                      // Sign Up Display Name & Role Selection
                       if (_isSignUpMode) ...[
                         TextField(
                           controller: _nameController,
@@ -250,6 +252,42 @@ class _LoginScreenState extends State<LoginScreen> {
                             prefixIcon: Icon(Icons.person_outline),
                             border: OutlineInputBorder(),
                           ),
+                        ),
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedRole,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Your Role / भूमिका निवडा',
+                            prefixIcon: Icon(Icons.badge_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'pilgrim',
+                              child: Text('🚩 Pilgrim (वारकरी / ॲप वापरकर्ता)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'local_citizen',
+                              child: Text('🏡 Local Citizen (स्थानिक नागरिक)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'dindi_leader',
+                              child: Text('🚩 Dindi Leader (दिंडी प्रमुख)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'ngo_volunteer',
+                              child: Text('🤝 NGO Volunteer (सेवाभावी संस्था)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'police_authority',
+                              child: Text('👮 Police Authority (पोलीस प्रशासन)'),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedRole = val);
+                            }
+                          },
                         ),
                         const SizedBox(height: 14),
                       ],

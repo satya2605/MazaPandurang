@@ -22,18 +22,21 @@ class ApiPilgrimRepository implements PilgrimRepository {
       final response = await _apiClient.get('/palkhi').timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final decoded = json.decode(response.body);
+        final Map<String, dynamic> data = (decoded is List && decoded.isNotEmpty)
+            ? decoded.first as Map<String, dynamic>
+            : (decoded is Map<String, dynamic> ? decoded : <String, dynamic>{});
         debugPrint('[API] /api/palkhi success');
         return PalkhiInfo(
-          palkhiId: data['id'] ?? 'PALKHI-001',
+          palkhiId: (data['id'] ?? 'PALKHI-001').toString(),
           name: data['name'] ?? 'Sant Dnyaneshwar Maharaj Palkhi',
-          currentStage: data['currentStage'] ?? 'Saswad Stay',
-          nextStop: data['nextStop'] ?? 'Jejuri',
+          currentStage: data['currentStage'] ?? data['current_stage'] ?? 'Saswad Stay',
+          nextStop: data['nextStop'] ?? data['next_stop'] ?? 'Jejuri',
           currentPosition: WariLatLng(
             data['latitude']?.toDouble() ?? 18.3411,
             data['longitude']?.toDouble() ?? 74.0305,
           ),
-          lastUpdated: DateTime.tryParse(data['lastUpdated'] ?? '') ?? DateTime.now(),
+          lastUpdated: DateTime.tryParse(data['lastUpdated'] ?? data['updated_at'] ?? '') ?? DateTime.now(),
           routePoints: (await _fallback.getPalkhiInfo()).routePoints,
         );
       }
