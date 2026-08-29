@@ -51,7 +51,7 @@ class _NgoRegistrationScreenState extends State<NgoRegistrationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-              'NGO Registration Submitted! Status: PENDING Admin Approval.'),
+              'Application submitted successfully. Waiting for Admin verification.'),
           backgroundColor: Color(0xFFE65100),
           duration: Duration(seconds: 3),
         ),

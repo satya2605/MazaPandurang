@@ -25,8 +25,14 @@ class ServiceCard extends StatelessWidget {
         return Icons.water_drop;
       case NgoServiceCategory.shelter:
         return Icons.night_shelter;
+      case NgoServiceCategory.clothing:
+        return Icons.checkroom;
+      case NgoServiceCategory.sanitation:
+        return Icons.wc;
       case NgoServiceCategory.volunteer:
         return Icons.people;
+      case NgoServiceCategory.emergency:
+        return Icons.emergency;
       case NgoServiceCategory.lostAndFound:
         return Icons.find_in_page;
       case NgoServiceCategory.other:

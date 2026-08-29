@@ -6,9 +6,9 @@ export async function getAllNgos(req, res, next) {
     const client = getSupabaseClient();
 
     let query = client.from('ngos').select('*, ngo_images(id, image_url, caption)');
-    if (status) {
+    if (status && status !== 'all') {
       query = query.eq('status', status);
-    } else {
+    } else if (!status) {
       query = query.eq('status', 'approved');
     }
 
@@ -116,6 +116,52 @@ export async function getNgoImages(req, res, next) {
 
     if (error) throw error;
     res.json(data || []);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function addNgoImage(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { image_url, caption } = req.body;
+    const client = getSupabaseClient();
+
+    if (!image_url) {
+      return res.status(400).json({ error: 'image_url is required' });
+    }
+
+    const { data, error } = await client
+      .from('ngo_images')
+      .insert({
+        ngo_id: id,
+        image_url,
+        caption: caption || 'NGO Gallery',
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteNgoImage(req, res, next) {
+  try {
+    const { id, imageId } = req.params;
+    const client = getSupabaseClient();
+
+    const { error } = await client
+      .from('ngo_images')
+      .delete()
+      .eq('id', imageId)
+      .eq('ngo_id', id);
+
+    if (error) throw error;
+    res.json({ success: true, message: 'NGO image record removed' });
   } catch (err) {
     next(err);
   }

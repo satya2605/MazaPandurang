@@ -25,6 +25,10 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   void initState() {
     super.initState();
     _repo.addListener(_onRepoChange);
+    // Fetch live NGO profile and services on initialization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   @override
@@ -35,6 +39,11 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
 
   void _onRepoChange() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _loadData() async {
+    await _repo.fetchNgoProfile();
+    await _repo.fetchServices();
   }
 
   void _openRegistration() {
@@ -56,6 +65,17 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
   }
 
   void _openServiceForm([NgoService? service]) {
+    if (_repo.organization.approvalStatus == NgoApprovalStatus.pending) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Application submitted. Waiting for Admin verification before adding services.'),
+          backgroundColor: Color(0xFFE65100),
+        ),
+      );
+      return;
+    }
+
     if (_repo.organization.approvalStatus == NgoApprovalStatus.rejected) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -124,6 +144,11 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Refresh Data',
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+          ),
+          IconButton(
             tooltip: 'NGO Profile & Verification',
             icon: const Icon(Icons.account_balance),
             onPressed: _openProfile,
@@ -143,207 +168,252 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
         label: const Text('Add Seva Service'),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Approval Status Banner
-              ApprovalStatusBanner(status: org.approvalStatus),
-              const SizedBox(height: 16),
-
-              // NGO Info Header Card
-              Card(
-                color: const Color(0xFF2E7D32).withAlpha(12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: const Color(0xFF2E7D32).withAlpha(40),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 26,
-                        backgroundColor: Color(0xFF2E7D32),
-                        child:
-                            Icon(Icons.church, color: Colors.white, size: 28),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              org.name,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF212121),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Reg: ${org.registrationNo} • ${org.primaryCategory}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF666666),
-                              ),
-                            ),
-                          ],
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          color: const Color(0xFF2E7D32),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Error / Session Banner if present
+                if (_repo.errorMessage != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.red.shade800),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _repo.errorMessage!,
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.red.shade900),
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios,
-                            size: 16, color: Color(0xFF2E7D32)),
-                        onPressed: _openProfile,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Summary Metrics Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMetricTile(
-                      label: 'Total Services',
-                      value: '${_repo.services.length}',
-                      icon: Icons.grid_view,
-                      color: const Color(0xFF1565C0),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildMetricTile(
-                      label: 'Active & Available',
-                      value: '$availableCount',
-                      icon: Icons.check_circle,
-                      color: const Color(0xFF2E7D32),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildMetricTile(
-                      label: 'User Reports',
-                      value: '$totalReports',
-                      icon: Icons.report_problem,
-                      color: const Color(0xFFE65100),
+                        TextButton(
+                          onPressed: _loadData,
+                          child: const Text('Retry'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 20),
 
-              // Service List Header & Filters
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Seva Services',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF212121),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => _openServiceForm(),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add Service'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF2E7D32),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                // Approval Status Banner
+                ApprovalStatusBanner(status: org.approvalStatus),
+                const SizedBox(height: 16),
 
-              // Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children:
-                      ['All', 'Food', 'Medical', 'Water', 'Shelter'].map((cat) {
-                    final isSelected = _selectedCategoryFilter == cat;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(cat),
-                        selected: isSelected,
-                        selectedColor: const Color(0xFF2E7D32),
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              _selectedCategoryFilter = cat;
-                            });
-                          }
-                        },
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Service List
-              if (services.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+                // NGO Info Header Card
+                Card(
+                  color: const Color(0xFF2E7D32).withAlpha(12),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300),
+                    side: BorderSide(
+                      color: const Color(0xFF2E7D32).withAlpha(40),
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.design_services,
-                          size: 48, color: Colors.grey.shade400),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No Seva Services Found',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 26,
+                          backgroundColor: Color(0xFF2E7D32),
+                          child:
+                              Icon(Icons.church, color: Colors.white, size: 28),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Tap "Add Seva Service" to list your organization assistance location.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.black54, fontSize: 13),
-                      ),
-                    ],
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                org.name,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF212121),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Reg: ${org.registrationNo} • ${org.primaryCategory}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF666666),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_forward_ios,
+                              size: 16, color: Color(0xFF2E7D32)),
+                          onPressed: _openProfile,
+                        ),
+                      ],
+                    ),
                   ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: services.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final service = services[index];
-                    return ServiceCard(
-                      service: service,
-                      onTap: () => _openServiceDetail(service),
-                      onEdit: () => _openServiceForm(service),
-                    );
-                  },
                 ),
-              const SizedBox(height: 80),
-            ],
+                const SizedBox(height: 16),
+
+                // Summary Metrics Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricTile(
+                        label: 'Total Services',
+                        value: '${_repo.services.length}',
+                        icon: Icons.grid_view,
+                        color: const Color(0xFF1565C0),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildMetricTile(
+                        label: 'Active & Available',
+                        value: '$availableCount',
+                        icon: Icons.check_circle,
+                        color: const Color(0xFF2E7D32),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildMetricTile(
+                        label: 'User Reports',
+                        value: '$totalReports',
+                        icon: Icons.report_problem,
+                        color: const Color(0xFFE65100),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Service List Header & Filters
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Seva Services',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF212121),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _openServiceForm(),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add Service'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Filter Chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ['All', 'Food', 'Medical', 'Water', 'Shelter']
+                        .map((cat) {
+                      final isSelected = _selectedCategoryFilter == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(cat),
+                          selected: isSelected,
+                          selectedColor: const Color(0xFF2E7D32),
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black87,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedCategoryFilter = cat;
+                              });
+                            }
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Service List
+                if (_repo.isLoading && services.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child:
+                          CircularProgressIndicator(color: Color(0xFF2E7D32)),
+                    ),
+                  )
+                else if (services.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.design_services,
+                            size: 48, color: Colors.grey.shade400),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'No Seva Services Found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Tap "Add Seva Service" to list your organization assistance location.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.black54, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: services.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final service = services[index];
+                      return ServiceCard(
+                        service: service,
+                        onTap: () => _openServiceDetail(service),
+                        onEdit: () => _openServiceForm(service),
+                      );
+                    },
+                  ),
+                const SizedBox(height: 80),
+              ],
+            ),
           ),
         ),
       ),

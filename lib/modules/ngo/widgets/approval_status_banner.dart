@@ -28,7 +28,7 @@ class ApprovalStatusBanner extends StatelessWidget {
         icon = Icons.verified_user;
         title = 'Verified NGO Partner (Approved)';
         description =
-            'Your organization is trusted and all services are active on the public Wari map.';
+            'Your organization is approved by Admin and all services are active on the public Wari map.';
         break;
 
       case NgoApprovalStatus.pending:
@@ -38,7 +38,7 @@ class ApprovalStatusBanner extends StatelessWidget {
         icon = Icons.hourglass_top;
         title = 'Approval Pending (Under Review)';
         description =
-            'Your NGO registration is currently being reviewed by Wari authorities. Services will appear public upon approval.';
+            'Application submitted. Waiting for Admin verification. Services can be added and published once approved.';
         break;
 
       case NgoApprovalStatus.rejected:
@@ -48,7 +48,7 @@ class ApprovalStatusBanner extends StatelessWidget {
         icon = Icons.gpp_bad;
         title = 'Registration Rejected';
         description =
-            'Please update your registration details or contact police/admin authorities for assistance.';
+            'Your NGO registration was not approved. Please contact administrative authorities for details.';
         break;
     }
 
