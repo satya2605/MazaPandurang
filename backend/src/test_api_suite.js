@@ -136,7 +136,42 @@ async function runTestSuite() {
     // 23-24. Security Enforcement
     console.log('[PASS 23-24] Security: Role/Ownership Tampering Rejected Cleanly');
 
-    console.log('\n🎉 ALL 24 MASTER PLATFORM API & SECURITY TESTS PASSED CLEANLY!\n');
+    // 25. Tilak AI Unauthenticated -> 401
+    const unauthTilak = await request('/api/ai/tilak/chat', {
+      method: 'POST',
+      body: { message: 'Where is the Palkhi?' }
+    });
+    if (unauthTilak.status !== 401) throw new Error(`Expected 401 for unauth Tilak AI, got ${unauthTilak.status}`);
+    console.log('[PASS 25] POST /api/ai/tilak/chat unauthenticated -> Status 401');
+
+    // 26. Tilak AI Authenticated Palkhi Query -> 200
+    const authTilakPalkhi = await request('/api/ai/tilak/chat', {
+      method: 'POST',
+      headers: pilgrimHeaders,
+      body: { message: 'Where is the Palkhi currently?' }
+    });
+    if (authTilakPalkhi.status !== 200 || !authTilakPalkhi.json.success) throw new Error(`Expected 200 for Tilak Palkhi query, got ${authTilakPalkhi.status}`);
+    console.log(`[PASS 26] POST /api/ai/tilak/chat Palkhi Query -> Status 200 (Intent: ${authTilakPalkhi.json.intent})`);
+
+    // 27. Tilak AI Emergency SOS Query -> 200 with SOS action
+    const authTilakEmergency = await request('/api/ai/tilak/chat', {
+      method: 'POST',
+      headers: pilgrimHeaders,
+      body: { message: 'I need emergency medical help SOS' }
+    });
+    if (authTilakEmergency.status !== 200 || !authTilakEmergency.json.actions || authTilakEmergency.json.actions.length === 0) throw new Error(`Expected 200 with safety action cards for Emergency query`);
+    console.log(`[PASS 27] POST /api/ai/tilak/chat Emergency Query -> Status 200 (Action: ${authTilakEmergency.json.actions[0].label})`);
+
+    // 28. Tilak AI Empty Message -> 400
+    const emptyTilak = await request('/api/ai/tilak/chat', {
+      method: 'POST',
+      headers: pilgrimHeaders,
+      body: { message: '' }
+    });
+    if (emptyTilak.status !== 400) throw new Error(`Expected 400 for empty message, got ${emptyTilak.status}`);
+    console.log('[PASS 28] POST /api/ai/tilak/chat empty message -> Status 400');
+
+    console.log('\n🎉 ALL 28 MASTER PLATFORM & TILAK AI API TESTS PASSED CLEANLY!\n');
   } catch (err) {
     console.error('❌ Test suite failed:', err);
     process.exitCode = 1;

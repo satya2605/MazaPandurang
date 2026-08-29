@@ -369,6 +369,25 @@ class ApiPilgrimRepository implements PilgrimRepository {
 
   @override
   Future<TilakChatMessage> queryTilakAI(String prompt) async {
+    try {
+      final response = await _apiClient.post(
+        '/ai/tilak/chat',
+        body: {
+          'message': prompt,
+          'context': {
+            'latitude': 18.3411,
+            'longitude': 74.0305,
+          },
+        },
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        return TilakChatMessage.fromJson(json);
+      }
+    } catch (e) {
+      debugPrint('[MOCK] /api/ai/tilak/chat fallback: $e');
+    }
     return await _fallback.queryTilakAI(prompt);
   }
 }

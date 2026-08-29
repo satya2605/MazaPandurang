@@ -101,7 +101,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Tilak AI Assistant'), findsOneWidget);
-      expect(find.text('Where is the Palkhi right now?'), findsOneWidget);
+      expect(find.textContaining('Where is the Palkhi right now?'), findsOneWidget);
     });
   });
 }

@@ -21,6 +21,7 @@ import bhaktiRoutes from './routes/bhakti.routes.js';
 import donationsRoutes from './routes/donations.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import dindiLeaderRoutes from './routes/dindiLeader.routes.js';
+import tilakRoutes from './routes/tilak.routes.js';
 
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -70,6 +71,7 @@ app.use('/api/donations-info', donationsRoutes);
 app.use('/api/donations', donationsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dindi-leader', dindiLeaderRoutes);
+app.use('/api/ai/tilak', tilakRoutes);
 
 // Centralized Error Handler
 app.use(errorHandler);

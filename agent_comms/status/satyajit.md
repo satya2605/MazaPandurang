@@ -7,24 +7,18 @@
 - **Status**: `COMPLETED`
 
 ## Task Overview
-- **Current Task**: Pilgrim Module Integration with Shared Platform & REST APIs
+- **Current Task**: Tilak AI Foundation & Pilgrim Integration Implementation
 - **Completed**:
-  - Connected `ApiPilgrimRepository` to shared `ApiClient` (`lib/core/api/api_client.dart`) and `AuthService` (`lib/core/auth/auth_service.dart`).
-  - Integrated REST Endpoints:
-    - `GET /api/services` (Facility discovery with category filtering)
-    - `GET /api/palkhi` & `GET /api/palkhi/locations` (Live Palkhi tracking)
-    - `GET /api/wari-route` (8 Wari route stages)
-    - `GET /api/city-places` & `GET /api/routes` (City places & routes)
-    - `GET /api/bhakti` (Devotional audio & video content)
-    - `GET /api/donations-info` (Donation trust & bank details)
-    - `GET /api/dindis`, `GET /api/dindis/:id`, `GET /api/dindis/:id/members`, `POST /api/dindis/:id/join` (Dindi list, detail, member inspection, and join requests)
-    - `GET /api/lost-persons`, `GET /api/lost-persons/:id/sightings`, `POST /api/lost-persons/:id/sightings` (Lost person reports & sighting submission)
-    - `POST /api/emergencies` (Emergency SOS dispatch)
-  - Zero direct Supabase client mutations in Pilgrim module.
-  - Implemented automatic fallback to `MockPilgrimRepository` for offline/unreachable backend states.
-  - Clean 401, 403, and empty error handling.
-  - Unit tests updated in `test/pilgrim/api_pilgrim_repository_test.dart` (18/18 passed).
-- **Working On**: Next Module Handoff / Cross-Module Support
+  - `POST /api/ai/tilak/chat` REST endpoint requiring Supabase JWT authentication (`authenticateJwt`).
+  - `AIProvider` abstraction (`backend/src/services/ai/aiProvider.js`) with `DevAIProvider` (deterministic local engine), `GeminiAIProvider`, and `OpenAIAIProvider`.
+  - Tilak Context Retriever (`backend/src/services/ai/tilak.service.js`) querying canonical 22-table schema (`palkhi_tracking`, `wari_route`, `services`, `dindis`, `lost_person_reports`) with strict privacy boundaries.
+  - Interactive Action Cards returned in response (`{ type, label, targetRoute }`) for navigation.
+  - Connected `ApiPilgrimRepository.queryTilakAI` to `ApiClient()`.
+  - Refactored `TilakAiScreen` (`lib/modules/pilgrim/screens/tilak_ai_screen.dart`) with action card buttons and suggested prompt chips.
+  - Added 4 backend tests to `backend/src/test_api_suite.js` (28/28 passed).
+  - Added Flutter unit & widget tests in `test/pilgrim/tilak_ai_test.dart` (24/24 passed).
+  - Created Technical Contract `docs/ai/TILAK_AI_CONTRACT.md` and ADR `agent_comms/decisions/2026-08-29-009-tilak-ai.md`.
+- **Working On**: Next Phase / Cross-Module Location Features
 - **Blocked**: No
 - **Needs Communication**: No
-- **Last Updated**: 2026-08-29 19:10:00 IST
+- **Last Updated**: 2026-08-29 20:25:00 IST

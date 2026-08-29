@@ -23,10 +23,12 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
   bool _isThinking = false;
 
   static const List<String> _suggestedPrompts = [
-    'Where is the Palkhi right now?',
-    'Where is the nearest medical camp?',
-    'Which Dindi am I near?',
-    'Where can I find drinking water?',
+    '📍 Where is the Palkhi right now?',
+    '🏥 Find medical help',
+    '💧 Where can I get water?',
+    '🛣️ What is the next Wari stop?',
+    '🙏 Tell me about Pandurang',
+    '🚨 I need emergency help',
   ];
 
   @override
@@ -249,7 +251,32 @@ class _ChatBubble extends StatelessWidget {
                 fontSize: 15,
               ),
             ),
-            if (message.suggestedActionText != null &&
+            if (!message.isUser && message.actions.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: message.actions.map((act) {
+                  final isEmergency = act.type == 'emergency';
+                  return ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isEmergency ? Colors.red : AppColors.primaryLight,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 36),
+                    ),
+                    onPressed: () {
+                      final target = act.targetRoute ?? message.targetRoute ?? '/map';
+                      if (onActionTap != null) {
+                        onActionTap!(target);
+                      }
+                    },
+                    icon: Icon(isEmergency ? Icons.warning_amber : Icons.explore, size: 16),
+                    label: Text(act.label),
+                  );
+                }).toList(),
+              ),
+            ] else if (!message.isUser &&
+                message.suggestedActionText != null &&
                 message.targetRoute != null) ...[
               const SizedBox(height: 10),
               ElevatedButton.icon(

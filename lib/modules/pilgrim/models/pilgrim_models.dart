@@ -218,12 +218,39 @@ class BhaktiMediaItem {
   });
 }
 
+/// Structured Action returned by Tilak AI.
+class TilakAction {
+  final String type;
+  final String? id;
+  final String label;
+  final String? targetRoute;
+
+  const TilakAction({
+    required this.type,
+    this.id,
+    required this.label,
+    this.targetRoute,
+  });
+
+  factory TilakAction.fromJson(Map<String, dynamic> json) {
+    return TilakAction(
+      type: json['type']?.toString() ?? 'action',
+      id: json['id']?.toString(),
+      label: json['label']?.toString() ?? json['action_label']?.toString() ?? 'View Details',
+      targetRoute: json['targetRoute']?.toString() ?? json['target_route']?.toString(),
+    );
+  }
+}
+
 /// Tilak AI Chat message.
 class TilakChatMessage {
   final String id;
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final String? intent;
+  final List<TilakAction> actions;
+  final List<String> sources;
   final String? suggestedActionText;
   final String? targetRoute;
 
@@ -232,9 +259,33 @@ class TilakChatMessage {
     required this.text,
     required this.isUser,
     required this.timestamp,
+    this.intent,
+    this.actions = const [],
+    this.sources = const [],
     this.suggestedActionText,
     this.targetRoute,
   });
+
+  factory TilakChatMessage.fromJson(Map<String, dynamic> json) {
+    final actionsList = (json['actions'] as List<dynamic>?)
+            ?.map((a) => TilakAction.fromJson(a as Map<String, dynamic>))
+            .toList() ??
+        [];
+
+    final firstAction = actionsList.isNotEmpty ? actionsList.first : null;
+
+    return TilakChatMessage(
+      id: json['id']?.toString() ?? 'MSG-AI-${DateTime.now().millisecondsSinceEpoch}',
+      text: json['reply']?.toString() ?? json['text']?.toString() ?? 'Ram Krishna Hari!',
+      isUser: false,
+      timestamp: DateTime.now(),
+      intent: json['intent']?.toString(),
+      actions: actionsList,
+      sources: (json['sources'] as List<dynamic>?)?.map((s) => s.toString()).toList() ?? [],
+      suggestedActionText: firstAction?.label,
+      targetRoute: firstAction?.targetRoute,
+    );
+  }
 }
 
 /// Wari route stage information returned by GET /api/wari-route.
