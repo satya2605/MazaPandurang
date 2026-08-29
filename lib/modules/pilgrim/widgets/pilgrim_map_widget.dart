@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../common/constants/app_colors.dart';
 import '../models/pilgrim_models.dart';
 import '../repositories/pilgrim_repository.dart';
+import '../services/map_config.dart';
 import '../services/map_service_interface.dart';
 
 /// Interactive Map Canvas displaying MapLibre + MapTiler / OSM data layers,
@@ -25,7 +27,8 @@ class PilgrimMapWidget extends StatefulWidget {
 }
 
 class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
-  double _zoomLevel = 1.0;
+  MapLibreMapController? _mapController;
+  double _zoomLevel = 11.0;
   ServiceCategory? _selectedCategoryFilter;
   PalkhiInfo? _palkhi;
   List<DindiMarkerInfo> _dindis = [];
@@ -72,27 +75,100 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
     }
   }
 
+  void _onMapCreated(MapLibreMapController controller) {
+    _mapController = controller;
+    _addRouteLineAndMarkers();
+  }
+
+  void _addRouteLineAndMarkers() async {
+    if (_mapController == null || _palkhi == null) return;
+
+    final routeCoords = _palkhi!.routePoints
+        .map((pt) => LatLng(pt.latitude, pt.longitude))
+        .toList();
+
+    await _mapController?.addLine(
+      LineOptions(
+        geometry: routeCoords,
+        lineColor: '#E65100',
+        lineWidth: 5.0,
+        lineOpacity: 0.85,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final apiKey = widget.mapService.mapTilerApiKey ?? MapConfig.mapTilerApiKey;
+    final hasKey = apiKey.trim().isNotEmpty;
+    final styleUrl = MapConfig.mapTilerStyleUrl.isNotEmpty
+        ? MapConfig.mapTilerStyleUrl
+        : 'https://api.maptiler.com/maps/streets-v2/style.json?key=$apiKey';
+
     return Stack(
       children: [
-        // Map Canvas Renderer
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          color: const Color(0xFFE8ECEF),
-          child: CustomPaint(
-            painter: _MapCanvasPainter(
-              zoomLevel: _zoomLevel,
-              selectedCategory: _selectedCategoryFilter,
-              dindisCount: _dindis.length,
-              servicesCount: _services.length,
+        // MapLibre Basemap or Fallback Canvas
+        if (hasKey)
+          MapLibreMap(
+            styleString: styleUrl,
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(18.3411, 74.0305), // Saswad / Wari Center
+              zoom: 11.0,
             ),
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : const SizedBox.expand(),
+            onMapCreated: _onMapCreated,
+            trackCameraPosition: true,
+          )
+        else
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: const Color(0xFFE8ECEF),
+            child: CustomPaint(
+              painter: _MapCanvasPainter(
+                zoomLevel: _zoomLevel,
+                selectedCategory: _selectedCategoryFilter,
+                dindisCount: _dindis.length,
+                servicesCount: _services.length,
+              ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const SizedBox.expand(),
+            ),
           ),
-        ),
+
+        // Missing API Key Developer Notification Banner
+        if (!hasKey)
+          Positioned(
+            top: 140,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade900,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 6),
+                ],
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.white, size: 24),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'MapTiler API Key required for basemap tiles.\nRun app with --dart-define=MAPTILER_API_KEY=YOUR_KEY',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
         // Interactive Map Layers Overlay
         if (!_isLoading) ...[
@@ -202,9 +278,13 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
                   backgroundColor: AppColors.surface,
                   foregroundColor: AppColors.textPrimary,
                   onPressed: () {
-                    setState(() {
-                      _zoomLevel = (_zoomLevel + 0.2).clamp(0.5, 3.0);
-                    });
+                    if (_mapController != null) {
+                      _mapController!.animateCamera(CameraUpdate.zoomIn());
+                    } else {
+                      setState(() {
+                        _zoomLevel = (_zoomLevel + 0.2).clamp(0.5, 3.0);
+                      });
+                    }
                   },
                   child: const Icon(Icons.add),
                 ),
@@ -214,9 +294,13 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
                   backgroundColor: AppColors.surface,
                   foregroundColor: AppColors.textPrimary,
                   onPressed: () {
-                    setState(() {
-                      _zoomLevel = (_zoomLevel - 0.2).clamp(0.5, 3.0);
-                    });
+                    if (_mapController != null) {
+                      _mapController!.animateCamera(CameraUpdate.zoomOut());
+                    } else {
+                      setState(() {
+                        _zoomLevel = (_zoomLevel - 0.2).clamp(0.5, 3.0);
+                      });
+                    }
                   },
                   child: const Icon(Icons.remove),
                 ),
@@ -226,6 +310,14 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   onPressed: () {
+                    if (_mapController != null) {
+                      _mapController!.animateCamera(
+                        CameraUpdate.newLatLngZoom(
+                          const LatLng(18.3411, 74.0305),
+                          11.0,
+                        ),
+                      );
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -263,7 +355,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
   }
 }
 
-/// Custom Painter drawing Wari route polylines and map grid.
+/// Custom Painter drawing fallback Wari route polylines and map grid.
 class _MapCanvasPainter extends CustomPainter {
   final double zoomLevel;
   final ServiceCategory? selectedCategory;
