@@ -46,8 +46,22 @@ This document is the **MANDATORY API CONTRACT** for all 5 developer agents worki
 
 ---
 
-## 🔒 Server-Side Authorization & Authorization Rules
+## 🛠️ Multi-Agent Platform Boundaries
 
-1. **Lost Person Workflow**: `POST /api/lost-persons` creates missing person reports with `status = 'missing'` and `is_approved_by_admin = false` (pending review). Only Police/Admin can approve reports (`PATCH /api/lost-persons/:id`). `GET /api/lost-persons` returns approved/active cases only.
-2. **Resource Ownership**: Dindi Leaders can only update Dindis they own (`leader_id`). NGO volunteers can only update Seva facilities they manage (`provider_id`).
-3. **Private Photo Access**: Private lost person photos must be accessed via signed URLs (`GET /api/lost-persons/:id/photo-url`).
+### Shared Platform Owner (Satyajit Lead Agent / Architecture)
+- Supabase Auth & JWT verification middleware (`backend/src/middleware/auth.js`)
+- Admin Control Plane (`/api/admin/*`) & Audit Logging (`admin_audit_logs`)
+- Centralized Flutter `AuthService` (`lib/core/auth/auth_service.dart`) & `ApiClient` (`lib/core/api/api_client.dart`)
+- Shared Navigation & Route Registry (`lib/common/navigation/app_routes.dart`)
+- Database Schema, Migrations, and Idempotent Provisioning (`backend/scripts/provision-demo-users.js`)
+- Shared Technical Contracts (`docs/auth/`, `docs/api/`, `docs/database/`, `agent_comms/`)
+
+### Module Developers
+- **Satyajit — Pilgrim (`lib/modules/pilgrim/`)**: Pilgrim UI, map routes, service discovery, Bhakti playback.
+- **Sanket — Dindi Leader (`lib/modules/dindi/`)**: Dindi Leader UI, group announcements, live tracking (unlocked after Admin approval).
+- **Yogeshwari — Police / Authority (`lib/modules/police/`)**: Police UI, traffic alerts, emergency SOS dispatch.
+- **Shrutika — NGO Volunteer (`lib/modules/ngo/`)**: NGO UI, facility registration, volunteer coordination.
+- **Gauri — Local Citizen (`lib/modules/citizen/`)**: Citizen UI, traffic/parking guidance, missing person reporting.
+
+> **Module Agent Rules**: Module agents must NOT create duplicate `services`, `dindis`, `users`, or `auth` tables, nor bypass the Express REST gateway.
+

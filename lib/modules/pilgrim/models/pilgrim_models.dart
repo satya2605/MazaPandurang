@@ -63,6 +63,43 @@ class DindiMarkerInfo {
   });
 }
 
+/// Detailed Dindi Information.
+class DindiDetail {
+  final String id;
+  final String dindiNumber;
+  final String name;
+  final String leaderId;
+  final String leaderName;
+  final String leaderPhone;
+  final int memberCount;
+  final String currentLocationName;
+  final WariLatLng position;
+  final String status;
+  final String startPoint;
+  final String destination;
+  final String currentHalt;
+  final String roadStatus;
+  final String joinCode;
+
+  const DindiDetail({
+    required this.id,
+    required this.dindiNumber,
+    required this.name,
+    required this.leaderId,
+    required this.leaderName,
+    required this.leaderPhone,
+    required this.memberCount,
+    required this.currentLocationName,
+    required this.position,
+    required this.status,
+    required this.startPoint,
+    required this.destination,
+    required this.currentHalt,
+    required this.roadStatus,
+    required this.joinCode,
+  });
+}
+
 /// Category of Wari public services.
 enum ServiceCategory {
   medical,
@@ -140,7 +177,7 @@ class WariService {
   final ServiceCategory category;
   final WariLatLng position;
   final String address;
-  final String availabilityStatus; // e.g. "Available", "Busy", "Full"
+  final String availabilityStatus;
   final String description;
   final String contactPhone;
   final bool isVerified;
@@ -164,8 +201,7 @@ class BhaktiMediaItem {
   final String title;
   final String marathiTitle;
   final String artist;
-  final String
-      category; // e.g. "Featured", "Bhajans", "Abhang", "Kirtan", "Videos"
+  final String category;
   final String duration;
   final String thumbnailUrl;
   final String streamUrl;
@@ -226,6 +262,168 @@ class WariRouteStage {
         (json['latitude'] as num?)?.toDouble() ?? 18.3411,
         (json['longitude'] as num?)?.toDouble() ?? 74.0305,
       ),
+    );
+  }
+}
+
+/// City place information returned by GET /api/city-places.
+class CityPlace {
+  final String id;
+  final String name;
+  final String placeType;
+  final WariLatLng position;
+  final String description;
+
+  const CityPlace({
+    required this.id,
+    required this.name,
+    required this.placeType,
+    required this.position,
+    required this.description,
+  });
+
+  factory CityPlace.fromJson(Map<String, dynamic> json) {
+    return CityPlace(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      placeType: json['place_type']?.toString() ?? json['placeType']?.toString() ?? '',
+      position: WariLatLng(
+        (json['latitude'] as num?)?.toDouble() ?? 18.3411,
+        (json['longitude'] as num?)?.toDouble() ?? 74.0305,
+      ),
+      description: json['description']?.toString() ?? '',
+    );
+  }
+}
+
+/// City Route information returned by GET /api/routes.
+class CityRoute {
+  final String id;
+  final String name;
+  final String routeType;
+  final String status;
+  final String description;
+
+  const CityRoute({
+    required this.id,
+    required this.name,
+    required this.routeType,
+    required this.status,
+    required this.description,
+  });
+
+  factory CityRoute.fromJson(Map<String, dynamic> json) {
+    return CityRoute(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      routeType: json['route_type']?.toString() ?? json['routeType']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'open',
+      description: json['description']?.toString() ?? '',
+    );
+  }
+}
+
+/// Donations Info returned by GET /api/donations-info.
+class DonationsInfo {
+  final String bankName;
+  final String accountNumber;
+  final String ifscCode;
+  final String upiId;
+  final String trustName;
+  final String notes;
+
+  const DonationsInfo({
+    required this.bankName,
+    required this.accountNumber,
+    required this.ifscCode,
+    required this.upiId,
+    required this.trustName,
+    required this.notes,
+  });
+
+  factory DonationsInfo.fromJson(Map<String, dynamic> json) {
+    return DonationsInfo(
+      bankName: json['bank_name']?.toString() ?? json['bankName']?.toString() ?? 'State Bank of India',
+      accountNumber: json['account_number']?.toString() ?? json['accountNumber']?.toString() ?? '000000000000',
+      ifscCode: json['ifsc_code']?.toString() ?? json['ifscCode']?.toString() ?? 'SBIN0001234',
+      upiId: json['upi_id']?.toString() ?? json['upiId']?.toString() ?? 'wari@upi',
+      trustName: json['trust_name']?.toString() ?? json['trustName']?.toString() ?? 'Shree Vitthal Rukmini Mandir Samiti',
+      notes: json['notes']?.toString() ?? '',
+    );
+  }
+}
+
+/// Lost Person Report returned by GET /api/lost-persons.
+class LostPersonReport {
+  final String id;
+  final String fullName;
+  final int age;
+  final String gender;
+  final String photoUrl;
+  final String lastSeenLocation;
+  final WariLatLng position;
+  final String contactPhone;
+  final String status;
+
+  const LostPersonReport({
+    required this.id,
+    required this.fullName,
+    required this.age,
+    required this.gender,
+    required this.photoUrl,
+    required this.lastSeenLocation,
+    required this.position,
+    required this.contactPhone,
+    required this.status,
+  });
+
+  factory LostPersonReport.fromJson(Map<String, dynamic> json) {
+    return LostPersonReport(
+      id: json['id']?.toString() ?? '',
+      fullName: json['full_name']?.toString() ?? json['fullName']?.toString() ?? '',
+      age: (json['age'] as num?)?.toInt() ?? 0,
+      gender: json['gender']?.toString() ?? '',
+      photoUrl: json['photo_url']?.toString() ?? json['photoUrl']?.toString() ?? '',
+      lastSeenLocation: json['last_seen_location']?.toString() ?? json['lastSeenLocation']?.toString() ?? '',
+      position: WariLatLng(
+        (json['latitude'] as num?)?.toDouble() ?? 18.3411,
+        (json['longitude'] as num?)?.toDouble() ?? 74.0305,
+      ),
+      contactPhone: json['contact_phone']?.toString() ?? json['contactPhone']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'missing',
+    );
+  }
+}
+
+/// Sighting of a Lost Person returned by GET /api/lost-persons/:id/sightings.
+class LostPersonSighting {
+  final String id;
+  final String lostPersonId;
+  final String locationName;
+  final WariLatLng position;
+  final String details;
+  final DateTime createdAt;
+
+  const LostPersonSighting({
+    required this.id,
+    required this.lostPersonId,
+    required this.locationName,
+    required this.position,
+    required this.details,
+    required this.createdAt,
+  });
+
+  factory LostPersonSighting.fromJson(Map<String, dynamic> json) {
+    return LostPersonSighting(
+      id: json['id']?.toString() ?? '',
+      lostPersonId: json['lost_person_id']?.toString() ?? json['lostPersonId']?.toString() ?? '',
+      locationName: json['location_name']?.toString() ?? json['locationName']?.toString() ?? '',
+      position: WariLatLng(
+        (json['latitude'] as num?)?.toDouble() ?? 18.3411,
+        (json['longitude'] as num?)?.toDouble() ?? 74.0305,
+      ),
+      details: json['details']?.toString() ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 }

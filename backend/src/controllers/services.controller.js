@@ -3,13 +3,16 @@ import { calculateDistance } from '../utils/geo.js';
 
 export async function getAllServices(req, res, next) {
   try {
-    const { category, search, status } = req.query;
+    const { category, search, status, all } = req.query;
     const client = getSupabaseClient();
 
     let query = client
       .from('services')
       .select('*, service_images(id, storage_path)');
 
+    if (all !== 'true') {
+      query = query.eq('is_verified', true);
+    }
     if (category) {
       query = query.ilike('category', category);
     }

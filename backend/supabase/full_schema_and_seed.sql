@@ -153,13 +153,16 @@ CREATE TABLE IF NOT EXISTS services (
   provider_id UUID REFERENCES profiles(id),
   provider_type VARCHAR(50) DEFAULT 'NGO',
   provider_name VARCHAR(255),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE services
+ADD COLUMN IF NOT EXISTS provider_id UUID REFERENCES profiles(id),
 ADD COLUMN IF NOT EXISTS provider_type VARCHAR(50) DEFAULT 'NGO',
-ADD COLUMN IF NOT EXISTS provider_name VARCHAR(255);
+ADD COLUMN IF NOT EXISTS provider_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- 7. SERVICE IMAGES & REPORTS
 CREATE TABLE IF NOT EXISTS service_images (
@@ -335,10 +338,20 @@ CREATE TABLE IF NOT EXISTS city_places (
   image_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 14. STORAGE BUCKETS
+-- 14. ADMIN AUDIT LOGS
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  action VARCHAR(100) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  target_id VARCHAR(255) NOT NULL,
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 15. STORAGE BUCKETS
 INSERT INTO storage.buckets (id, name, public)
 VALUES 
   ('lost-person-images', 'lost-person-images', false),
