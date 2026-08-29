@@ -103,8 +103,11 @@ class _HomeContent extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFAF9F6),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: CustomScrollView(
+              slivers: [
             // -- App bar with title and greeting --
             SliverAppBar(
               expandedHeight: 120,
@@ -196,6 +199,8 @@ class _HomeContent extends StatelessWidget {
             ),
           ],
         ),
+          ),
+        ),
       ),
     );
   }
@@ -282,13 +287,13 @@ class _QuickActionsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
+    return GridView.extent(
+      maxCrossAxisExtent: 180,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.1,
+      childAspectRatio: 1.0,
       children: [
         CitizenQuickAction(
           icon: Icons.map_outlined,

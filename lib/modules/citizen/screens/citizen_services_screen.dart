@@ -62,8 +62,11 @@ class _CitizenServicesScreenState extends State<CitizenServicesScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            children: [
           // -- Category filter chips --
           _CategoryFilterBar(
             selectedCategory: _selectedCategory,
@@ -137,6 +140,8 @@ class _CitizenServicesScreenState extends State<CitizenServicesScreen> {
                   ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

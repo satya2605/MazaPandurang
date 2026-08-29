@@ -52,19 +52,19 @@ IF "%Choice%"=="3" GOTO RUN_EDGE
 :RUN_CHROME
 echo.
 echo Launching Maza Pandurang on Chrome Web...
-flutter run -d chrome !DART_DEFINE_FLAG!
+flutter run -d chrome !DART_DEFINE_FLAG! --dart-define=MAPTILER_API_KEY=YOUR_API_KEY_HERE
 GOTO END
 
 :RUN_WINDOWS
 echo.
 echo Launching Maza Pandurang on Windows Desktop...
-flutter run -d windows !DART_DEFINE_FLAG!
+flutter run -d windows !DART_DEFINE_FLAG! --dart-define=MAPTILER_API_KEY=YOUR_API_KEY_HERE
 GOTO END
 
 :RUN_EDGE
 echo.
 echo Launching Maza Pandurang on Edge Web...
-flutter run -d edge !DART_DEFINE_FLAG!
+flutter run -d edge !DART_DEFINE_FLAG! --dart-define=MAPTILER_API_KEY=YOUR_API_KEY_HERE
 GOTO END
 
 :END

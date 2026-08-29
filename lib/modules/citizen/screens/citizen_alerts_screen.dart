@@ -23,9 +23,12 @@ class CitizenAlertsScreen extends StatelessWidget {
           ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
           // Phase notice
           Container(
             padding: const EdgeInsets.all(14),
@@ -86,6 +89,8 @@ class CitizenAlertsScreen extends StatelessWidget {
             severity: AlertSeverity.high,
           ),
         ],
+      ),
+        ),
       ),
     );
   }
