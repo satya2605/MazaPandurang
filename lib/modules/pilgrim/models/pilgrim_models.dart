@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// Geographical coordinate representation.
@@ -6,6 +7,23 @@ class WariLatLng {
   final double longitude;
 
   const WariLatLng(this.latitude, this.longitude);
+
+  /// Haversine distance calculation in kilometers.
+  double distanceToInKm(WariLatLng other) {
+    const double earthRadiusKm = 6371.0;
+    final dLat = _degreesToRadians(other.latitude - latitude);
+    final dLon = _degreesToRadians(other.longitude - longitude);
+
+    final lat1Rad = _degreesToRadians(latitude);
+    final lat2Rad = _degreesToRadians(other.latitude);
+
+    final a = (math.sin(dLat / 2) * math.sin(dLat / 2)) +
+        (math.sin(dLon / 2) * math.sin(dLon / 2) * math.cos(lat1Rad) * math.cos(lat2Rad));
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  }
+
+  static double _degreesToRadians(double degrees) => degrees * (3.1415926535897932 / 180.0);
 }
 
 /// User/Pilgrim location data.
@@ -474,6 +492,51 @@ class LostPersonSighting {
         (json['longitude'] as num?)?.toDouble() ?? 74.0305,
       ),
       details: json['details']?.toString() ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+/// Active Traffic Alert returned by GET /api/traffic-alerts.
+class TrafficAlert {
+  final String id;
+  final String alertCode;
+  final String title;
+  final String description;
+  final String type;
+  final String severity; // HIGH, MEDIUM, LOW
+  final String status;   // ACTIVE, RESOLVED
+  final WariLatLng position;
+  final String createdBy;
+  final DateTime createdAt;
+
+  const TrafficAlert({
+    required this.id,
+    required this.alertCode,
+    required this.title,
+    required this.description,
+    required this.type,
+    required this.severity,
+    required this.status,
+    required this.position,
+    required this.createdBy,
+    required this.createdAt,
+  });
+
+  factory TrafficAlert.fromJson(Map<String, dynamic> json) {
+    return TrafficAlert(
+      id: json['id']?.toString() ?? '',
+      alertCode: json['alert_code']?.toString() ?? json['alertCode']?.toString() ?? 'TRF-000',
+      title: json['title']?.toString() ?? 'Traffic Alert',
+      description: json['description']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'SLOW_TRAFFIC',
+      severity: (json['severity']?.toString() ?? 'MEDIUM').toUpperCase(),
+      status: (json['status']?.toString() ?? 'ACTIVE').toUpperCase(),
+      position: WariLatLng(
+        (json['latitude'] as num?)?.toDouble() ?? 18.3411,
+        (json['longitude'] as num?)?.toDouble() ?? 74.0305,
+      ),
+      createdBy: json['created_by']?.toString() ?? '',
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     );
   }

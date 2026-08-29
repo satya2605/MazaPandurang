@@ -368,6 +368,21 @@ class ApiPilgrimRepository implements PilgrimRepository {
   }
 
   @override
+  Future<List<TrafficAlert>> getTrafficAlerts() async {
+    try {
+      final response = await _apiClient.get('/traffic-alerts').timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        return list.map((item) => TrafficAlert.fromJson(item as Map<String, dynamic>)).toList();
+      }
+    } catch (e) {
+      debugPrint('[MOCK] /api/traffic-alerts fallback: $e');
+    }
+    return await _fallback.getTrafficAlerts();
+  }
+
+  @override
   Future<TilakChatMessage> queryTilakAI(String prompt) async {
     try {
       final response = await _apiClient.post(

@@ -443,5 +443,35 @@ class MockPilgrimRepository implements PilgrimRepository {
       suggestedActionText: actionText,
     );
   }
+
+  @override
+  Future<List<TrafficAlert>> getTrafficAlerts() async {
+    return [
+      TrafficAlert(
+        id: 'TRF-001',
+        alertCode: 'TRF-DIVE-01',
+        title: 'Dive Ghat Heavy Crowd Slowdown',
+        description: 'Procession move speed slow near Dive Ghat hairpins. Heavy pedestrian crowd.',
+        type: 'CROWD_DENSITY',
+        severity: 'HIGH',
+        status: 'ACTIVE',
+        position: const WariLatLng(18.4100, 73.9700),
+        createdBy: 'POLICE-ADMIN',
+        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+      ),
+      TrafficAlert(
+        id: 'TRF-002',
+        alertCode: 'TRF-SASWAD-02',
+        title: 'Saswad Ring Road Diversion',
+        description: 'Vehicular traffic diverted via Saswad Bypass for Palkhi arrival.',
+        type: 'DIVERSION',
+        severity: 'MEDIUM',
+        status: 'ACTIVE',
+        position: const WariLatLng(18.3411, 74.0305),
+        createdBy: 'TRAFFIC-CELL',
+        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+      ),
+    ];
+  }
 }
 

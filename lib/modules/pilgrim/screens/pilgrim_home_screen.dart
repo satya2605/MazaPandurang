@@ -42,6 +42,7 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
   List<DindiMarkerInfo> _dindis = [];
   List<WariService> _services = [];
   List<WariRouteStage> _routeStages = [];
+  List<TrafficAlert> _trafficAlerts = [];
   PilgrimLocation? _userLocation;
   bool _isLoading = true;
   ServiceCategory? _selectedCategoryFilter;
@@ -67,6 +68,7 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
         category: category ?? _selectedCategoryFilter,
       );
       final routeStages = await _repository.getWariRoute();
+      final trafficAlerts = await _repository.getTrafficAlerts();
 
       if (mounted) {
         setState(() {
@@ -75,6 +77,7 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
           _dindis = dindis;
           _services = services;
           _routeStages = routeStages;
+          _trafficAlerts = trafficAlerts;
           _isLoading = false;
         });
       }
@@ -103,7 +106,7 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
     }
   }
 
-  void _openTilakAiModal() {
+  void _openTilakAiModal({String? initialPrompt}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -121,6 +124,8 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
               setState(() => _currentNavIndex = 1);
             } else if (route == '/services') {
               setState(() => _currentNavIndex = 2);
+            } else if (route == '/help') {
+              setState(() => _currentNavIndex = 5);
             }
           },
         ),
@@ -147,6 +152,7 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
           dindis: _dindis,
           services: _services,
           routeStages: _routeStages,
+          trafficAlerts: _trafficAlerts,
           userLocation: _userLocation,
           isLoading: _isLoading,
           selectedCategoryFilter: _selectedCategoryFilter,
@@ -154,6 +160,9 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
           onRefresh: () => _loadData(),
           onPalkhiSelected: () {
             setState(() => _currentNavIndex = 1);
+          },
+          onAskTilakPrompt: (prompt) {
+            _openTilakAiModal(initialPrompt: prompt);
           },
         );
     }

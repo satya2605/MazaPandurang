@@ -3,8 +3,10 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../common/constants/app_colors.dart';
 import '../models/pilgrim_models.dart';
 import '../repositories/pilgrim_repository.dart';
+import '../services/location_service.dart';
 import '../services/map_config.dart';
 import '../services/map_service_interface.dart';
+import 'map_marker_card.dart';
 
 /// Presentational Interactive Map Canvas displaying MapLibre + MapTiler / OSM data layers,
 /// user location, Palkhi marker, Dindis, and categorized service markers.
@@ -16,6 +18,7 @@ class PilgrimMapWidget extends StatefulWidget {
   final List<DindiMarkerInfo>? dindis;
   final List<WariService>? services;
   final List<WariRouteStage>? routeStages;
+  final List<TrafficAlert>? trafficAlerts;
   final PilgrimLocation? userLocation;
   final bool? isLoading;
   final ServiceCategory? selectedCategoryFilter;
@@ -23,6 +26,8 @@ class PilgrimMapWidget extends StatefulWidget {
   final VoidCallback? onRefresh;
   final Function(WariService)? onServiceSelected;
   final VoidCallback? onPalkhiSelected;
+  final Function(TrafficAlert)? onTrafficAlertSelected;
+  final Function(String prompt)? onAskTilakPrompt;
 
   const PilgrimMapWidget({
     super.key,
@@ -32,6 +37,7 @@ class PilgrimMapWidget extends StatefulWidget {
     this.dindis,
     this.services,
     this.routeStages,
+    this.trafficAlerts,
     this.userLocation,
     this.isLoading,
     this.selectedCategoryFilter,
@@ -39,6 +45,8 @@ class PilgrimMapWidget extends StatefulWidget {
     this.onRefresh,
     this.onServiceSelected,
     this.onPalkhiSelected,
+    this.onTrafficAlertSelected,
+    this.onAskTilakPrompt,
   });
 
   @override
@@ -47,13 +55,14 @@ class PilgrimMapWidget extends StatefulWidget {
 
 class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
   MapLibreMapController? _mapController;
+  final LocationService _locationService = LocationService();
   double _zoomLevel = 11.0;
 
-  // Local fallback state if props are not supplied directly
   PalkhiInfo? _localPalkhi;
   List<DindiMarkerInfo> _localDindis = [];
   List<WariService> _localServices = [];
   List<WariRouteStage> _localRouteStages = [];
+  List<TrafficAlert> _localTrafficAlerts = [];
   PilgrimLocation? _localUserLocation;
   bool _localIsLoading = false;
   ServiceCategory? _localSelectedCategoryFilter;
@@ -68,13 +77,14 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
 
   Future<void> _loadLocalData() async {
     setState(() => _localIsLoading = true);
-    final location = await widget.repository.getCurrentUserLocation();
+    final location = await _locationService.getCurrentLocation();
     final palkhi = await widget.repository.getPalkhiInfo();
     final dindis = await widget.repository.getNearbyDindis();
     final services = await widget.repository.getServices(
       category: _localSelectedCategoryFilter,
     );
     final routeStages = await widget.repository.getWariRoute();
+    final trafficAlerts = await widget.repository.getTrafficAlerts();
 
     if (mounted) {
       setState(() {
@@ -83,6 +93,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
         _localDindis = dindis;
         _localServices = services;
         _localRouteStages = routeStages;
+        _localTrafficAlerts = trafficAlerts;
         _localIsLoading = false;
       });
     }
@@ -91,13 +102,11 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
   PalkhiInfo? get _effectivePalkhi => widget.palkhi ?? _localPalkhi;
   List<DindiMarkerInfo> get _effectiveDindis => widget.dindis ?? _localDindis;
   List<WariService> get _effectiveServices => widget.services ?? _localServices;
-  List<WariRouteStage> get _effectiveRouteStages =>
-      widget.routeStages ?? _localRouteStages;
-  PilgrimLocation? get _effectiveUserLocation =>
-      widget.userLocation ?? _localUserLocation;
+  List<WariRouteStage> get _effectiveRouteStages => widget.routeStages ?? _localRouteStages;
+  List<TrafficAlert> get _effectiveTrafficAlerts => widget.trafficAlerts ?? _localTrafficAlerts;
+  PilgrimLocation? get _effectiveUserLocation => widget.userLocation ?? _localUserLocation;
   bool get _effectiveIsLoading => widget.isLoading ?? _localIsLoading;
-  ServiceCategory? get _effectiveCategoryFilter =>
-      widget.selectedCategoryFilter ?? _localSelectedCategoryFilter;
+  ServiceCategory? get _effectiveCategoryFilter => widget.selectedCategoryFilter ?? _localSelectedCategoryFilter;
 
   void _handleCategoryFilter(ServiceCategory? category) {
     if (widget.onCategoryFilterSelected != null) {
@@ -229,11 +238,29 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: widget.onPalkhiSelected,
+                onTap: () {
+                  if (_effectivePalkhi != null) {
+                    MapMarkerCard.showPalkhiCard(
+                      context: context,
+                      palkhi: _effectivePalkhi!,
+                      onTrackSelected: () {
+                        if (widget.onPalkhiSelected != null) {
+                          widget.onPalkhiSelected!();
+                        }
+                      },
+                      onAskTilakSelected: () {
+                        if (widget.onAskTilakPrompt != null) {
+                          widget.onAskTilakPrompt!('Where is the Palkhi right now?');
+                        }
+                      },
+                    );
+                  } else if (widget.onPalkhiSelected != null) {
+                    widget.onPalkhiSelected!();
+                  }
+                },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(12),
@@ -315,6 +342,54 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
               ),
             ),
           ),
+
+          // Active Traffic Alert Bar
+          if (_effectiveTrafficAlerts.isNotEmpty)
+            Positioned(
+              top: 124,
+              left: 16,
+              right: 16,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    final firstAlert = _effectiveTrafficAlerts.first;
+                    MapMarkerCard.showTrafficCard(
+                      context: context,
+                      alert: firstAlert,
+                      onAskTilakSelected: () {
+                        if (widget.onAskTilakPrompt != null) {
+                          widget.onAskTilakPrompt!('Is there traffic ahead?');
+                        }
+                      },
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade900,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '⚠️ ${_effectiveTrafficAlerts.first.title}',
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Text('Details ➔', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Zoom, Refresh & Re-Center Controls
           Positioned(
