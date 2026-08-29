@@ -2,7 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import { config, validateEnv } from './config/env.js';
 import { checkDatabaseConnection } from './db/supabase.js';
+
 import servicesRoutes from './routes/services.routes.js';
+import palkhiRoutes from './routes/palkhi.routes.js';
+import dindisRoutes from './routes/dindis.routes.js';
+import wariRouteRoutes from './routes/wariRoute.routes.js';
+import bhaktiRoutes from './routes/bhakti.routes.js';
+import donationsRoutes from './routes/donations.routes.js';
+import emergencyRoutes from './routes/emergency.routes.js';
+import lostPersonsRoutes from './routes/lostPersons.routes.js';
+
 import { errorHandler } from './middleware/errorHandler.js';
 
 validateEnv();
@@ -32,51 +41,13 @@ app.get('/api/health', async (req, res) => {
 
 // Primary API Modular Routes
 app.use('/api/services', servicesRoutes);
-
-// Placeholder Module Route Handlers
-app.get('/api/palkhi', (req, res) => {
-  res.json({
-    name: 'Sant Dnyaneshwar Maharaj Palkhi',
-    currentStage: 'Saswad Stay',
-    nextStop: 'Jejuri',
-    latitude: 18.3411,
-    longitude: 74.0305,
-    lastUpdated: new Date().toISOString(),
-  });
-});
-
-app.get('/api/dindis', (req, res) => {
-  res.json([
-    {
-      id: 'DND-001',
-      name: 'Alka Talkies Dindi #1',
-      leaderName: 'Harkal Maharaj',
-      memberCount: 450,
-      currentStatus: 'Moving towards Saswad',
-    },
-    {
-      id: 'DND-002',
-      name: 'Mauli Swaranand Dindi #45',
-      leaderName: 'Namdeo Varkari',
-      memberCount: 320,
-      currentStatus: 'Halted at Hadapsar',
-    },
-  ]);
-});
-
-app.get('/api/bhakti', (req, res) => {
-  res.json([
-    {
-      id: 'BHK-001',
-      title: 'Maza Pandurang Abhang',
-      marathiTitle: 'माझा पांडुरंग अभंग',
-      artist: 'Pandit Bhimsen Joshi',
-      category: 'Abhang',
-      duration: '04:30',
-      externalUrl: 'https://example.com/audio/abhang1.mp3',
-    },
-  ]);
-});
+app.use('/api/palkhi', palkhiRoutes);
+app.use('/api/dindis', dindisRoutes);
+app.use('/api/wari-route', wariRouteRoutes);
+app.use('/api/bhakti', bhaktiRoutes);
+app.use('/api/donations', donationsRoutes);
+app.use('/api/emergency', emergencyRoutes);
+app.use('/api/lost-persons', lostPersonsRoutes);
 
 // Centralized Error Handler
 app.use(errorHandler);
@@ -89,6 +60,11 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(` 🚩 Maza Pandurang REST API Server running on port ${PORT}`);
     console.log(` ➔ Health Check: http://localhost:${PORT}/api/health`);
     console.log(` ➔ Services API: http://localhost:${PORT}/api/services`);
+    console.log(` ➔ Palkhi API:   http://localhost:${PORT}/api/palkhi`);
+    console.log(` ➔ Dindis API:   http://localhost:${PORT}/api/dindis`);
+    console.log(` ➔ Route API:    http://localhost:${PORT}/api/wari-route`);
+    console.log(` ➔ Bhakti API:   http://localhost:${PORT}/api/bhakti`);
+    console.log(` ➔ Emergency API:http://localhost:${PORT}/api/emergency`);
     console.log(`========================================================\n`);
   });
 }

@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^1.2.0
   maplibre_gl: ^0.27.0
 
 dev_dependencies:
