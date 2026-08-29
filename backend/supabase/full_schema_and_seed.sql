@@ -99,6 +99,14 @@ CREATE TABLE IF NOT EXISTS dindis (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Ensure columns exist even if dindis table was created by older baseline migration
+ALTER TABLE dindis
+ADD COLUMN IF NOT EXISTS start_point VARCHAR(255),
+ADD COLUMN IF NOT EXISTS destination VARCHAR(255),
+ADD COLUMN IF NOT EXISTS current_halt VARCHAR(255),
+ADD COLUMN IF NOT EXISTS road_status VARCHAR(50) DEFAULT 'clear',
+ADD COLUMN IF NOT EXISTS join_code VARCHAR(50);
+
 -- 4. DINDI MEMBERSHIPS
 CREATE TABLE IF NOT EXISTS dindi_memberships (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -111,6 +119,11 @@ CREATE TABLE IF NOT EXISTS dindi_memberships (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(pilgrim_id, dindi_id)
 );
+
+ALTER TABLE dindi_memberships
+ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'warkari',
+ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ DEFAULT NOW(),
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- 5. PALKHI TRACKING
 CREATE TABLE IF NOT EXISTS palkhi_tracking (
@@ -143,6 +156,10 @@ CREATE TABLE IF NOT EXISTS services (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE services
+ADD COLUMN IF NOT EXISTS provider_type VARCHAR(50) DEFAULT 'NGO',
+ADD COLUMN IF NOT EXISTS provider_name VARCHAR(255);
 
 -- 7. SERVICE IMAGES & REPORTS
 CREATE TABLE IF NOT EXISTS service_images (
