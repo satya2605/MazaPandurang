@@ -68,13 +68,14 @@ void main() {
       );
 
       expect(palkhi.name, contains('Palkhi'));
+      expect(dindis, isA<List<DindiMarkerInfo>>());
       expect(dindis.isNotEmpty, isTrue);
-      expect(services, isNotNull);
+      expect(services, isA<List<WariService>>());
       expect(routeStages.length, equals(8));
-      expect(cityPlaces, isNotNull);
-      expect(cityRoutes, isNotNull);
+      expect(cityPlaces, isA<List<CityPlace>>());
+      expect(cityRoutes, isA<List<CityRoute>>());
       expect(donations, isNotNull);
-      expect(lostPersons, isNotNull);
+      expect(lostPersons, isA<List<LostPersonReport>>());
       expect(emergencyResult, isTrue);
     });
   });

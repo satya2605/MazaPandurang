@@ -439,7 +439,10 @@ export async function getAdminDindiLeaders(req, res, next) {
     const { status } = req.query;
     const client = getSupabaseClient();
 
-    let query = client.from('profiles').select('*, dindis(id, name, dindi_number, status)').eq('role', 'dindi_leader');
+    let query = client
+      .from('profiles')
+      .select('*, dindis(id, name, dindi_number, status, start_point, destination, member_count)')
+      .eq('role', 'dindi_leader');
     if (status) {
       query = query.eq('status', status);
     }

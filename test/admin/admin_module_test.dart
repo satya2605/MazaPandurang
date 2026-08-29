@@ -74,6 +74,35 @@ void main() {
       expect(srv.isActive, isFalse);
     });
 
+    test('AdminDindiLeader.fromJson parses rich application details', () {
+      final json = {
+        'id': '00000000-0000-0000-0000-000000000002',
+        'display_name': 'Sanket Patil',
+        'email': 'sanket@mazapandurang.local',
+        'phone': '+91 98220 12345',
+        'status': 'pending',
+        'dindis': [
+          {
+            'name': 'Shree Tukaram Maharaj Palkhi Dindi No. 12',
+            'start_point': 'Dehu',
+            'destination': 'Pandharpur',
+            'member_count': 200,
+            'dindi_number': 'DND-1788022905250',
+          }
+        ],
+      };
+
+      final leader = AdminDindiLeader.fromJson(json);
+
+      expect(leader.id, equals('00000000-0000-0000-0000-000000000002'));
+      expect(leader.displayName, equals('Sanket Patil'));
+      expect(leader.status, equals('pending'));
+      expect(leader.dindiName, equals('Shree Tukaram Maharaj Palkhi Dindi No. 12'));
+      expect(leader.startPoint, equals('Dehu'));
+      expect(leader.destination, equals('Pandharpur'));
+      expect(leader.memberCount, equals(200));
+    });
+
     testWidgets('AdminDashboardScreen renders TabBar and Title', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(

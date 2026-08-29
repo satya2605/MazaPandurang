@@ -2,8 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maza_pandurang/app/app.dart';
 import 'package:maza_pandurang/app/module_selector/module_selector_screen.dart';
+import 'package:maza_pandurang/modules/dindi/repositories/in_memory_dindi_repository.dart';
+import 'package:maza_pandurang/modules/dindi/services/dindi_identity_provider.dart';
+import 'package:maza_pandurang/modules/dindi/services/dindi_state_service.dart';
 
 void main() {
+  setUp(() async {
+    InMemoryDindiRepository.instance.reset();
+    final service = DindiStateService(
+      repository: InMemoryDindiRepository.instance,
+      identityProvider: const DevDindiIdentityProvider(),
+    );
+    service.resetState();
+    await service.loadDindis();
+  });
+
   group('Maza Pandurang Role Selector Tests', () {
     testWidgets('App launches and renders Role Selector screen with 5 roles',
         (WidgetTester tester) async {
@@ -36,8 +49,7 @@ void main() {
       await tester.tap(find.text('Continue as Dindi Leader'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Dindi Leader Module'), findsWidgets);
-      expect(find.text('Module initialized successfully.'), findsOneWidget);
+      expect(find.text('My Dindis'), findsOneWidget);
     });
 
     testWidgets('Development Module Selector renders all 5 modules',
