@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../common/constants/app_colors.dart';
-import '../repositories/mock_pilgrim_repository.dart';
+import '../models/pilgrim_models.dart';
+import '../repositories/api_pilgrim_repository.dart';
 import '../repositories/pilgrim_repository.dart';
 import '../services/map_service_interface.dart';
 
@@ -16,6 +17,7 @@ import 'services_screen.dart';
 import 'tilak_ai_screen.dart';
 
 /// Main Pilgrim Home Screen — Centered around the Wari Interactive Map.
+/// Acts as the Controller layer managing repository state loading & refresh.
 class PilgrimHomeScreen extends StatefulWidget {
   final PilgrimRepository? repository;
   final MapServiceInterface? mapService;
@@ -36,16 +38,63 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
   int _currentNavIndex =
       0; // 0: Home/Map, 1: Palkhi, 2: Services, 3: Tilak AI, 4: Bhakti, 5: Help
 
+  PalkhiInfo? _palkhi;
+  List<DindiMarkerInfo> _dindis = [];
+  List<WariService> _services = [];
+  List<WariRouteStage> _routeStages = [];
+  PilgrimLocation? _userLocation;
+  bool _isLoading = true;
+  ServiceCategory? _selectedCategoryFilter;
+
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ?? MockPilgrimRepository();
+    // Default to ApiPilgrimRepository for live backend queries with Mock fallback
+    _repository = widget.repository ?? ApiPilgrimRepository();
     _mapService = widget.mapService ?? DefaultMapService();
+    _loadData();
+  }
+
+  Future<void> _loadData({ServiceCategory? category}) async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final location = await _repository.getCurrentUserLocation();
+      final palkhi = await _repository.getPalkhiInfo();
+      final dindis = await _repository.getNearbyDindis();
+      final services = await _repository.getServices(
+        category: category ?? _selectedCategoryFilter,
+      );
+      final routeStages = await _repository.getWariRoute();
+
+      if (mounted) {
+        setState(() {
+          _userLocation = location;
+          _palkhi = palkhi;
+          _dindis = dindis;
+          _services = services;
+          _routeStages = routeStages;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[PilgrimHomeScreen] Error loading map state: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _onCategoryFilterSelected(ServiceCategory? category) {
+    setState(() {
+      _selectedCategoryFilter = category;
+    });
+    _loadData(category: category);
   }
 
   void _onNavTap(int index) {
     if (index == 3) {
-      // Tilak AI action opens as a modal or full-screen view
       _openTilakAiModal();
     } else {
       setState(() {
@@ -94,6 +143,15 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
         return PilgrimMapWidget(
           repository: _repository,
           mapService: _mapService,
+          palkhi: _palkhi,
+          dindis: _dindis,
+          services: _services,
+          routeStages: _routeStages,
+          userLocation: _userLocation,
+          isLoading: _isLoading,
+          selectedCategoryFilter: _selectedCategoryFilter,
+          onCategoryFilterSelected: _onCategoryFilterSelected,
+          onRefresh: () => _loadData(),
           onPalkhiSelected: () {
             setState(() => _currentNavIndex = 1);
           },
@@ -124,6 +182,11 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Data',
+            onPressed: () => _loadData(),
+          ),
           IconButton(
             icon: const Icon(Icons.account_circle_outlined),
             tooltip: 'Profile',

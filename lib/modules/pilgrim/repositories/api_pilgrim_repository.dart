@@ -31,6 +31,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        debugPrint('[API] /api/palkhi success');
         return PalkhiInfo(
           palkhiId: data['id'] ?? 'PALKHI-001',
           name: data['name'] ?? 'Sant Dnyaneshwar Maharaj Palkhi',
@@ -46,7 +47,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
         );
       }
     } catch (e) {
-      debugPrint('[ApiPilgrimRepository] Fallback Palkhi: $e');
+      debugPrint('[MOCK] /api/palkhi fallback: $e');
     }
     return await _fallback.getPalkhiInfo();
   }
@@ -60,6 +61,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
 
       if (response.statusCode == 200) {
         final List list = json.decode(response.body);
+        debugPrint('[API] /api/dindis success (${list.length} dindis)');
         return list
             .map((item) => DindiMarkerInfo(
                   dindiId: item['id'] ?? 'DND-001',
@@ -75,7 +77,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
             .toList();
       }
     } catch (e) {
-      debugPrint('[ApiPilgrimRepository] Fallback Dindis: $e');
+      debugPrint('[MOCK] /api/dindis fallback: $e');
     }
     return await _fallback.getNearbyDindis();
   }
@@ -91,6 +93,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
 
       if (response.statusCode == 200) {
         final List list = json.decode(response.body);
+        debugPrint('[API] /api/services success (${list.length} services)');
         return list.map((item) {
           final catName = item['category'] ?? 'Other';
           final matchedCategory = ServiceCategory.values.firstWhere(
@@ -116,7 +119,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
         }).toList();
       }
     } catch (e) {
-      debugPrint('[ApiPilgrimRepository] Fallback Services: $e');
+      debugPrint('[MOCK] /api/services fallback: $e');
     }
     return await _fallback.getServices(category: category);
   }
@@ -130,6 +133,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
 
       if (response.statusCode == 200) {
         final item = json.decode(response.body);
+        debugPrint('[API] /api/services/$serviceId success');
         final catName = item['category'] ?? 'Other';
         final matchedCategory = ServiceCategory.values.firstWhere(
           (c) => c.name.toLowerCase() == catName.toString().toLowerCase(),
@@ -152,9 +156,30 @@ class ApiPilgrimRepository implements PilgrimRepository {
         );
       }
     } catch (e) {
-      debugPrint('[ApiPilgrimRepository] Fallback ServiceById: $e');
+      debugPrint('[MOCK] /api/services/$serviceId fallback: $e');
     }
     return await _fallback.getServiceById(serviceId);
+  }
+
+  @override
+  Future<List<WariRouteStage>> getWariRoute() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/wari-route'))
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final List list = json.decode(response.body);
+        debugPrint('[API] /api/wari-route success (${list.length} stages)');
+        return list
+            .map(
+                (item) => WariRouteStage.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('[MOCK] /api/wari-route fallback: $e');
+    }
+    return await _fallback.getWariRoute();
   }
 
   @override
@@ -168,6 +193,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
 
       if (response.statusCode == 200) {
         final List list = json.decode(response.body);
+        debugPrint('[API] /api/bhakti success (${list.length} media items)');
         return list
             .map((item) => BhaktiMediaItem(
                   id: item['id'] ?? 'BHK-001',
@@ -182,7 +208,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
             .toList();
       }
     } catch (e) {
-      debugPrint('[ApiPilgrimRepository] Fallback Bhakti: $e');
+      debugPrint('[MOCK] /api/bhakti fallback: $e');
     }
     return await _fallback.getBhaktiContent(category: category);
   }
