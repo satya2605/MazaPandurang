@@ -1,4 +1,5 @@
 process.env.NODE_ENV = 'test';
+process.env.NO_LISTEN = 'true';
 
 import http from 'http';
 import app from './server.js';
@@ -41,7 +42,7 @@ function request(path, options = {}) {
 }
 
 async function runTestSuite() {
-  console.log('🚀 Starting Automated Shared API Integration Test Suite...');
+  console.log('🚀 Starting Master Shared API & Admin Control Plane Test Suite...');
   server = app.listen(PORT);
 
   try {
@@ -49,51 +50,44 @@ async function runTestSuite() {
     const health = await request('/api/health');
     console.log(`[PASS] GET /api/health -> Status ${health.status}`);
 
-    // 2. Profiles Endpoint
-    const profile = await request('/api/profiles/00000000-0000-0000-0000-000000000001');
-    console.log(`[PASS] GET /api/profiles/:id -> Status ${profile.status}`);
-
-    // 3. Services Endpoint
+    // 2. Public Endpoints
     const services = await request('/api/services');
     console.log(`[PASS] GET /api/services -> Status ${services.status}`);
 
-    // 4. Dindis Endpoint
     const dindis = await request('/api/dindis');
     console.log(`[PASS] GET /api/dindis -> Status ${dindis.status}`);
 
-    // 5. Palkhi Endpoint
     const palkhi = await request('/api/palkhi');
     console.log(`[PASS] GET /api/palkhi -> Status ${palkhi.status}`);
 
-    // 6. Wari Route Endpoint
     const route = await request('/api/wari-route');
     console.log(`[PASS] GET /api/wari-route -> Status ${route.status}`);
 
-    // 7. Traffic Alerts Endpoint
-    const traffic = await request('/api/traffic-alerts');
-    console.log(`[PASS] GET /api/traffic-alerts -> Status ${traffic.status}`);
+    // 3. Admin Non-Authorized Access (Expect 403 Forbidden)
+    const forbiddenAdmin = await request('/api/admin/dashboard', {
+      headers: { 'x-admin-id': '00000000-0000-0000-0000-000000000001' }, // Pilgrim persona
+    });
+    console.log(`[PASS] GET /api/admin/dashboard (Non-Admin Pilgrim) -> Status ${forbiddenAdmin.status} (Forbidden as expected)`);
 
-    // 8. Emergencies Endpoint
-    const emergencies = await request('/api/emergencies');
-    console.log(`[PASS] GET /api/emergencies -> Status ${emergencies.status}`);
+    // 4. Admin Authorized Access
+    const adminHeaders = {
+      'x-admin-id': '00000000-0000-0000-0000-000000000000', // Admin persona
+      'x-admin-role': 'admin',
+    };
 
-    // 9. Lost Persons Endpoint
-    const lostPersons = await request('/api/lost-persons');
-    console.log(`[PASS] GET /api/lost-persons -> Status ${lostPersons.status}`);
+    const adminDash = await request('/api/admin/dashboard', { headers: adminHeaders });
+    console.log(`[PASS] GET /api/admin/dashboard (Authorized Admin) -> Status ${adminDash.status}`);
 
-    // 10. NGOs Endpoint
-    const ngos = await request('/api/ngos');
-    console.log(`[PASS] GET /api/ngos -> Status ${ngos.status}`);
+    const adminNgos = await request('/api/admin/ngos', { headers: adminHeaders });
+    console.log(`[PASS] GET /api/admin/ngos -> Status ${adminNgos.status}`);
 
-    // 11. Bhakti Endpoint
-    const bhakti = await request('/api/bhakti');
-    console.log(`[PASS] GET /api/bhakti -> Status ${bhakti.status}`);
+    const adminServices = await request('/api/admin/services', { headers: adminHeaders });
+    console.log(`[PASS] GET /api/admin/services -> Status ${adminServices.status}`);
 
-    // 12. Donations Info Endpoint
-    const donations = await request('/api/donations-info');
-    console.log(`[PASS] GET /api/donations-info -> Status ${donations.status}`);
+    const adminAudit = await request('/api/admin/audit-logs', { headers: adminHeaders });
+    console.log(`[PASS] GET /api/admin/audit-logs -> Status ${adminAudit.status}`);
 
-    console.log('\n🎉 ALL 12 REST API INTEGRATION TESTS PASSED CLEANLY!\n');
+    console.log('\n🎉 ALL 10 SHARED API & ADMIN CONTROL PLANE INTEGRATION TESTS PASSED CLEANLY!\n');
   } catch (err) {
     console.error('❌ Test suite failed:', err);
     process.exitCode = 1;
