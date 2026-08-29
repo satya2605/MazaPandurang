@@ -79,3 +79,7 @@ xcuserdata/
 *.pem
 *.key
 *.cert
+node_modules/
+backend/node_modules/
+backend/src/check_db.js
+backend/src/run_seed.js

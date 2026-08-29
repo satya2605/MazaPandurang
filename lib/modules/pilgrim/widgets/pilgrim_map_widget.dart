@@ -6,11 +6,21 @@ import '../repositories/pilgrim_repository.dart';
 import '../services/map_config.dart';
 import '../services/map_service_interface.dart';
 
-/// Interactive Map Canvas displaying MapLibre + MapTiler / OSM data layers,
+/// Presentational Interactive Map Canvas displaying MapLibre + MapTiler / OSM data layers,
 /// user location, Palkhi marker, Dindis, and categorized service markers.
 class PilgrimMapWidget extends StatefulWidget {
   final PilgrimRepository repository;
   final MapServiceInterface mapService;
+
+  final PalkhiInfo? palkhi;
+  final List<DindiMarkerInfo>? dindis;
+  final List<WariService>? services;
+  final List<WariRouteStage>? routeStages;
+  final PilgrimLocation? userLocation;
+  final bool? isLoading;
+  final ServiceCategory? selectedCategoryFilter;
+  final Function(ServiceCategory?)? onCategoryFilterSelected;
+  final VoidCallback? onRefresh;
   final Function(WariService)? onServiceSelected;
   final VoidCallback? onPalkhiSelected;
 
@@ -18,6 +28,15 @@ class PilgrimMapWidget extends StatefulWidget {
     super.key,
     required this.repository,
     required this.mapService,
+    this.palkhi,
+    this.dindis,
+    this.services,
+    this.routeStages,
+    this.userLocation,
+    this.isLoading,
+    this.selectedCategoryFilter,
+    this.onCategoryFilterSelected,
+    this.onRefresh,
     this.onServiceSelected,
     this.onPalkhiSelected,
   });
@@ -29,49 +48,65 @@ class PilgrimMapWidget extends StatefulWidget {
 class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
   MapLibreMapController? _mapController;
   double _zoomLevel = 11.0;
-  ServiceCategory? _selectedCategoryFilter;
-  PalkhiInfo? _palkhi;
-  List<DindiMarkerInfo> _dindis = [];
-  List<WariService> _services = [];
-  PilgrimLocation? _userLocation;
-  bool _isLoading = true;
+
+  // Local fallback state if props are not supplied directly
+  PalkhiInfo? _localPalkhi;
+  List<DindiMarkerInfo> _localDindis = [];
+  List<WariService> _localServices = [];
+  List<WariRouteStage> _localRouteStages = [];
+  PilgrimLocation? _localUserLocation;
+  bool _localIsLoading = false;
+  ServiceCategory? _localSelectedCategoryFilter;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    if (widget.palkhi == null && widget.dindis == null) {
+      _loadLocalData();
+    }
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadLocalData() async {
+    setState(() => _localIsLoading = true);
     final location = await widget.repository.getCurrentUserLocation();
     final palkhi = await widget.repository.getPalkhiInfo();
     final dindis = await widget.repository.getNearbyDindis();
     final services = await widget.repository.getServices(
-      category: _selectedCategoryFilter,
+      category: _localSelectedCategoryFilter,
     );
+    final routeStages = await widget.repository.getWariRoute();
 
     if (mounted) {
       setState(() {
-        _userLocation = location;
-        _palkhi = palkhi;
-        _dindis = dindis;
-        _services = services;
-        _isLoading = false;
+        _localUserLocation = location;
+        _localPalkhi = palkhi;
+        _localDindis = dindis;
+        _localServices = services;
+        _localRouteStages = routeStages;
+        _localIsLoading = false;
       });
     }
   }
 
-  void _onCategoryFilterSelected(ServiceCategory? category) async {
-    setState(() {
-      _selectedCategoryFilter = category;
-      _isLoading = true;
-    });
-    final services = await widget.repository.getServices(category: category);
-    if (mounted) {
+  PalkhiInfo? get _effectivePalkhi => widget.palkhi ?? _localPalkhi;
+  List<DindiMarkerInfo> get _effectiveDindis => widget.dindis ?? _localDindis;
+  List<WariService> get _effectiveServices => widget.services ?? _localServices;
+  List<WariRouteStage> get _effectiveRouteStages =>
+      widget.routeStages ?? _localRouteStages;
+  PilgrimLocation? get _effectiveUserLocation =>
+      widget.userLocation ?? _localUserLocation;
+  bool get _effectiveIsLoading => widget.isLoading ?? _localIsLoading;
+  ServiceCategory? get _effectiveCategoryFilter =>
+      widget.selectedCategoryFilter ?? _localSelectedCategoryFilter;
+
+  void _handleCategoryFilter(ServiceCategory? category) {
+    if (widget.onCategoryFilterSelected != null) {
+      widget.onCategoryFilterSelected!(category);
+    } else {
       setState(() {
-        _services = services;
-        _isLoading = false;
+        _localSelectedCategoryFilter = category;
       });
+      _loadLocalData();
     }
   }
 
@@ -81,20 +116,33 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
   }
 
   void _addRouteLineAndMarkers() async {
-    if (_mapController == null || _palkhi == null) return;
+    if (_mapController == null) return;
 
-    final routeCoords = _palkhi!.routePoints
-        .map((pt) => LatLng(pt.latitude, pt.longitude))
-        .toList();
+    final List<LatLng> coords = [];
+    if (_effectiveRouteStages.isNotEmpty) {
+      coords.addAll(
+        _effectiveRouteStages.map(
+          (st) => LatLng(st.position.latitude, st.position.longitude),
+        ),
+      );
+    } else if (_effectivePalkhi != null) {
+      coords.addAll(
+        _effectivePalkhi!.routePoints.map(
+          (pt) => LatLng(pt.latitude, pt.longitude),
+        ),
+      );
+    }
 
-    await _mapController?.addLine(
-      LineOptions(
-        geometry: routeCoords,
-        lineColor: '#E65100',
-        lineWidth: 5.0,
-        lineOpacity: 0.85,
-      ),
-    );
+    if (coords.isNotEmpty) {
+      await _mapController?.addLine(
+        LineOptions(
+          geometry: coords,
+          lineColor: '#E65100',
+          lineWidth: 5.0,
+          lineOpacity: 0.85,
+        ),
+      );
+    }
   }
 
   @override
@@ -117,6 +165,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
             ),
             onMapCreated: _onMapCreated,
             trackCameraPosition: true,
+            myLocationEnabled: false,
           )
         else
           Container(
@@ -126,17 +175,17 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
             child: CustomPaint(
               painter: _MapCanvasPainter(
                 zoomLevel: _zoomLevel,
-                selectedCategory: _selectedCategoryFilter,
-                dindisCount: _dindis.length,
-                servicesCount: _services.length,
+                selectedCategory: _effectiveCategoryFilter,
+                dindisCount: _effectiveDindis.length,
+                servicesCount: _effectiveServices.length,
               ),
-              child: _isLoading
+              child: _effectiveIsLoading
                   ? const Center(child: CircularProgressIndicator())
                   : const SizedBox.expand(),
             ),
           ),
 
-        // Missing API Key Developer Notification Banner
+        // Missing API Key Notification Banner
         if (!hasKey)
           Positioned(
             top: 140,
@@ -171,7 +220,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
           ),
 
         // Interactive Map Layers Overlay
-        if (!_isLoading) ...[
+        if (!_effectiveIsLoading) ...[
           // Palkhi Banner & Quick Access
           Positioned(
             top: 16,
@@ -206,7 +255,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              _palkhi?.name ?? 'Palkhi Live Track',
+                              _effectivePalkhi?.name ?? 'Palkhi Live Track',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -216,7 +265,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              'Stage: ${_palkhi?.currentStage}',
+                              'Stage: ${_effectivePalkhi?.currentStage}',
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -244,21 +293,21 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
               child: Row(
                 children: [
                   FilterChip(
-                    selected: _selectedCategoryFilter == null,
+                    selected: _effectiveCategoryFilter == null,
                     label: const Text('All Services'),
                     selectedColor: AppColors.primaryLight.withAlpha(50),
-                    onSelected: (_) => _onCategoryFilterSelected(null),
+                    onSelected: (_) => _handleCategoryFilter(null),
                   ),
                   const SizedBox(width: 8),
                   ...ServiceCategory.values.map(
                     (cat) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
-                        selected: _selectedCategoryFilter == cat,
+                        selected: _effectiveCategoryFilter == cat,
                         avatar: Icon(cat.icon, size: 16, color: cat.color),
                         label: Text(cat.label),
                         selectedColor: cat.color.withAlpha(40),
-                        onSelected: (_) => _onCategoryFilterSelected(cat),
+                        onSelected: (_) => _handleCategoryFilter(cat),
                       ),
                     ),
                   ),
@@ -267,12 +316,32 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
             ),
           ),
 
-          // Zoom & Re-Center Controls
+          // Zoom, Refresh & Re-Center Controls
           Positioned(
             right: 16,
             bottom: 30,
             child: Column(
               children: [
+                FloatingActionButton.small(
+                  heroTag: 'mapRefresh',
+                  backgroundColor: AppColors.surface,
+                  foregroundColor: AppColors.primary,
+                  onPressed: () {
+                    if (widget.onRefresh != null) {
+                      widget.onRefresh!();
+                    } else {
+                      _loadLocalData();
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Refreshing Wari map data...'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.refresh),
+                ),
+                const SizedBox(height: 8),
                 FloatingActionButton.small(
                   heroTag: 'zoomIn',
                   backgroundColor: AppColors.surface,
@@ -321,7 +390,7 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Centered on location: ${_userLocation?.name}',
+                          'Centered on location: ${_effectiveUserLocation?.name}',
                         ),
                         duration: const Duration(seconds: 2),
                       ),

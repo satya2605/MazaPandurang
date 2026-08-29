@@ -376,6 +376,52 @@ class MockPilgrimRepository implements PilgrimRepository {
   }
 
   @override
+  Future<List<WariRouteStage>> getWariRoute() async {
+    return const [
+      WariRouteStage(
+          id: '1',
+          stageName: 'Alandi (आळंदी)',
+          sequenceOrder: 1,
+          position: WariLatLng(18.6772, 73.8967)),
+      WariRouteStage(
+          id: '2',
+          stageName: 'Pune Stay (पुणे मुक्काम)',
+          sequenceOrder: 2,
+          position: WariLatLng(18.5204, 73.8567)),
+      WariRouteStage(
+          id: '3',
+          stageName: 'Dive Ghat (दिवे घाट)',
+          sequenceOrder: 3,
+          position: WariLatLng(18.4100, 73.9700)),
+      WariRouteStage(
+          id: '4',
+          stageName: 'Saswad Stay (सासवड मुक्काम)',
+          sequenceOrder: 4,
+          position: WariLatLng(18.3411, 74.0305)),
+      WariRouteStage(
+          id: '5',
+          stageName: 'Jejuri (जेजुरी)',
+          sequenceOrder: 5,
+          position: WariLatLng(18.2764, 74.1611)),
+      WariRouteStage(
+          id: '6',
+          stageName: 'Lonand (लोणंद)',
+          sequenceOrder: 6,
+          position: WariLatLng(18.0415, 74.1906)),
+      WariRouteStage(
+          id: '7',
+          stageName: 'Phaltan (फलटण)',
+          sequenceOrder: 7,
+          position: WariLatLng(17.9877, 74.4312)),
+      WariRouteStage(
+          id: '8',
+          stageName: 'Pandharpur (पंढरपूर धाम)',
+          sequenceOrder: 8,
+          position: WariLatLng(17.6777, 75.3283)),
+    ];
+  }
+
+  @override
   Future<List<BhaktiMediaItem>> getBhaktiContent({String? category}) async {
     if (category == null || category == 'Featured') return sampleBhaktiContent;
     return sampleBhaktiContent.where((b) => b.category == category).toList();
