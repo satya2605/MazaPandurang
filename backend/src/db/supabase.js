@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import { config } from '../config/env.js';
 
 let supabaseClient = null;
@@ -19,6 +20,9 @@ export function getSupabaseClient() {
           persistSession: false,
           autoRefreshToken: false,
         },
+        realtime: {
+          transport: ws,
+        },
       }
     );
   }
@@ -28,11 +32,17 @@ export function getSupabaseClient() {
 export async function checkDatabaseConnection() {
   try {
     const client = getSupabaseClient();
-    const { error } = await client.from('services').select('count', { count: 'exact', head: true });
-    if (error && error.code !== 'PGRST116') {
+    const { error } = await client
+      .from('services')
+      .select('count', { count: 'exact', head: true });
+
+    if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
       return { connected: false, message: error.message };
     }
-    return { connected: true, message: 'Supabase PostgreSQL connected successfully' };
+    return {
+      connected: true,
+      message: 'Supabase PostgreSQL connected successfully',
+    };
   } catch (err) {
     return { connected: false, message: err.message };
   }
