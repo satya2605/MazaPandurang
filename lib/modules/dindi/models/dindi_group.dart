@@ -9,6 +9,7 @@ class DindiGroup {
   final String currentHalt;
   final String roadStatus;
   final String joinCode;
+  final String leaderUserId;
 
   const DindiGroup({
     required this.id,
@@ -21,6 +22,7 @@ class DindiGroup {
     required this.currentHalt,
     required this.roadStatus,
     required this.joinCode,
+    this.leaderUserId = 'leader-sanket-1',
   });
 
   DindiGroup copyWith({
@@ -34,6 +36,7 @@ class DindiGroup {
     String? currentHalt,
     String? roadStatus,
     String? joinCode,
+    String? leaderUserId,
   }) {
     return DindiGroup(
       id: id ?? this.id,
@@ -46,6 +49,7 @@ class DindiGroup {
       currentHalt: currentHalt ?? this.currentHalt,
       roadStatus: roadStatus ?? this.roadStatus,
       joinCode: joinCode ?? this.joinCode,
+      leaderUserId: leaderUserId ?? this.leaderUserId,
     );
   }
 }

@@ -1,5 +1,6 @@
 class DindiAnnouncement {
   final String id;
+  final String dindiId;
   final String title;
   final String message;
   final DateTime timestamp;
@@ -7,6 +8,7 @@ class DindiAnnouncement {
 
   const DindiAnnouncement({
     required this.id,
+    required this.dindiId,
     required this.title,
     required this.message,
     required this.timestamp,

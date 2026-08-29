@@ -5,6 +5,7 @@ enum DindiMemberStatus {
 
 class DindiMember {
   final String id;
+  final String dindiId;
   final String name;
   final String phone;
   final String role;
@@ -13,6 +14,7 @@ class DindiMember {
 
   const DindiMember({
     required this.id,
+    required this.dindiId,
     required this.name,
     required this.phone,
     required this.role,
@@ -22,6 +24,7 @@ class DindiMember {
 
   DindiMember copyWith({
     String? id,
+    String? dindiId,
     String? name,
     String? phone,
     String? role,
@@ -30,6 +33,7 @@ class DindiMember {
   }) {
     return DindiMember(
       id: id ?? this.id,
+      dindiId: dindiId ?? this.dindiId,
       name: name ?? this.name,
       phone: phone ?? this.phone,
       role: role ?? this.role,
