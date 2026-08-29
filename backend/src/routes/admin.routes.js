@@ -14,10 +14,14 @@ import {
   unpublishService,
   getAdminDindis,
   approveDindi,
+  rejectDindi,
   suspendDindi,
   getAdminLostPersons,
   approveLostPerson,
   rejectLostPerson,
+  closeLostPerson,
+  getAdminServiceReports,
+  updateAdminServiceReport,
   getAdminUsers,
   updateUserStatus,
   getAdminAuditLogs,
@@ -54,12 +58,18 @@ router.patch('/services/:id/unpublish', unpublishService);
 // Dindi Moderation
 router.get('/dindis', getAdminDindis);
 router.patch('/dindis/:id/approve', approveDindi);
+router.patch('/dindis/:id/reject', rejectDindi);
 router.patch('/dindis/:id/suspend', suspendDindi);
 
 // Lost Person Moderation
 router.get('/lost-persons', getAdminLostPersons);
 router.patch('/lost-persons/:id/approve', approveLostPerson);
 router.patch('/lost-persons/:id/reject', rejectLostPerson);
+router.patch('/lost-persons/:id/close', closeLostPerson);
+
+// Service Reports Moderation
+router.get('/service-reports', getAdminServiceReports);
+router.patch('/service-reports/:id', updateAdminServiceReport);
 
 // Dindi Leader Moderation & Approval
 router.get('/dindi-leaders', getAdminDindiLeaders);

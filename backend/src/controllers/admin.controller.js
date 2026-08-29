@@ -545,3 +545,90 @@ export async function suspendDindiLeader(req, res, next) {
   }
 }
 
+export async function rejectDindi(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('dindis')
+      .update({ status: 'Rejected', updated_at: new Date().toISOString() })
+      .or(`id.eq.${id},dindi_number.eq.${id}`)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'REJECT_DINDI', 'dindi', id, reason || 'Dindi registration rejected');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function closeLostPerson(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('lost_person_reports')
+      .update({ status: 'found', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'CLOSE_LOST_PERSON', 'lost_person', id, reason || 'Person found and case closed');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAdminServiceReports(req, res, next) {
+  try {
+    const { status } = req.query;
+    const client = getSupabaseClient();
+
+    let query = client.from('service_reports').select('*, services(name, category), profiles:reporter_id(display_name, email)');
+    if (status) query = query.eq('status', status);
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('Admin service reports query fallback:', error.message);
+      return res.json([]);
+    }
+    res.json(data || []);
+  } catch (err) {
+    res.json([]);
+  }
+}
+
+export async function updateAdminServiceReport(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status, admin_notes } = req.body;
+    const client = getSupabaseClient();
+
+    const updates = { updated_at: new Date().toISOString() };
+    if (status) updates.status = status;
+    if (admin_notes !== undefined) updates.admin_notes = admin_notes;
+
+    const { data, error } = await client
+      .from('service_reports')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'UPDATE_SERVICE_REPORT', 'service_report', id, `Status set to ${status || 'updated'}`);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+
