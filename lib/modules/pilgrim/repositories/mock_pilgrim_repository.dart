@@ -284,6 +284,119 @@ class MockPilgrimRepository implements PilgrimRepository {
   }
 
   @override
+  Future<DindiDetail?> getDindiById(String id) async {
+    return DindiDetail(
+      id: id,
+      dindiNumber: 'DND-001',
+      name: 'Dindi No. 1 — Mauli Prasann',
+      leaderId: '00000000-0000-0000-0000-000000000002',
+      leaderName: 'Namdev Maharaj',
+      leaderPhone: '+91 98765 43211',
+      memberCount: 350,
+      currentLocationName: 'Saswad Stay',
+      position: const WariLatLng(18.3430, 74.0290),
+      status: 'Active',
+      startPoint: 'Alandi',
+      destination: 'Pandharpur',
+      currentHalt: 'Palkhi Talao Ground',
+      roadStatus: 'clear',
+      joinCode: 'DND101',
+    );
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getDindiMembers(String id) async {
+    return const [
+      {'id': 'MBR-1', 'display_name': 'Sopandev Varkari', 'role': 'member'},
+      {'id': 'MBR-2', 'display_name': 'Santosh Gaikwad', 'role': 'member'},
+    ];
+  }
+
+  @override
+  Future<bool> joinDindi(String dindiId, {String? notes}) async {
+    return true;
+  }
+
+  @override
+  Future<List<CityPlace>> getCityPlaces() async {
+    return const [
+      CityPlace(
+        id: 'PLC-1',
+        name: 'Vitthal Mandir Premises',
+        placeType: 'temple',
+        position: WariLatLng(18.3400, 74.0330),
+        description: 'Historic Mandir halt location in Saswad.',
+      ),
+    ];
+  }
+
+  @override
+  Future<List<CityRoute>> getCityRoutes() async {
+    return const [
+      CityRoute(
+        id: 'RTE-1',
+        name: 'Dive Ghat Main Bypass',
+        routeType: 'palkhi_route',
+        status: 'open',
+        description: 'Palkhi primary walking procession route.',
+      ),
+    ];
+  }
+
+  @override
+  Future<DonationsInfo?> getDonationsInfo() async {
+    return const DonationsInfo(
+      bankName: 'State Bank of India',
+      accountNumber: '34567890123',
+      ifscCode: 'SBIN0001234',
+      upiId: 'pandharpur@upi',
+      trustName: 'Shree Vitthal Rukmini Mandir Samiti',
+      notes: 'Direct donations to support Warkari water and food distribution camps.',
+    );
+  }
+
+  @override
+  Future<List<LostPersonReport>> getLostPersons() async {
+    return const [
+      LostPersonReport(
+        id: 'LST-1',
+        fullName: 'Ramrao Jadhav',
+        age: 68,
+        gender: 'Male',
+        photoUrl: '',
+        lastSeenLocation: 'Dive Ghat Top',
+        position: WariLatLng(18.4326, 73.9536),
+        contactPhone: '+91 98765 00000',
+        status: 'missing',
+      ),
+    ];
+  }
+
+  @override
+  Future<bool> reportLostPersonSighting(String lostPersonId, {required double latitude, required double longitude, required String locationName, String? details}) async {
+    return true;
+  }
+
+  @override
+  Future<List<LostPersonSighting>> getLostPersonSightings(String lostPersonId) async {
+    return [
+      LostPersonSighting(
+        id: 'SGT-1',
+        lostPersonId: lostPersonId,
+        locationName: 'Saswad Bus Stand',
+        position: const WariLatLng(18.3415, 74.0310),
+        details: 'Spotted resting at medical camp.',
+        createdAt: DateTime.now(),
+      ),
+    ];
+  }
+
+  @override
+  Future<bool> reportEmergency({required String emergencyType, required double latitude, required double longitude, String? description}) async {
+    return true;
+  }
+
+  @override
   Future<TilakChatMessage> queryTilakAI(String prompt) async {
     final lower = prompt.toLowerCase();
     String answer;
@@ -331,3 +444,4 @@ class MockPilgrimRepository implements PilgrimRepository {
     );
   }
 }
+
