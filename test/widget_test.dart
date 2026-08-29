@@ -36,8 +36,7 @@ void main() {
       await tester.tap(find.text('Continue as Dindi Leader'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Dindi Leader Module'), findsWidgets);
-      expect(find.text('Module initialized successfully.'), findsOneWidget);
+      expect(find.text('Dindi Leader Dashboard'), findsOneWidget);
     });
 
     testWidgets('Development Module Selector renders all 5 modules',
