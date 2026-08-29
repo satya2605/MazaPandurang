@@ -165,7 +165,7 @@ export async function createDindi(req, res, next) {
       current_halt: currentHalt.trim(),
       road_status: roadStatus,
       join_code: joinCode.trim(),
-      status: req.body.status || 'Active',
+      status: req.body.status || 'Pending',
       member_count: memberCount,
       current_location_name: currentLocationName,
       latitude,
