@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../common/navigation/app_routes.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../pilgrim/widgets/pilgrim_profile_modal.dart';
 import '../models/admin_models.dart';
 import '../repositories/admin_repository.dart';
 
@@ -343,6 +344,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             icon: const Icon(Icons.refresh),
             onPressed: _fetchAllData,
             tooltip: 'Refresh Data',
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => PilgrimProfileModal.show(context),
+            tooltip: 'My Profile',
           ),
           IconButton(
             icon: const Icon(Icons.logout),

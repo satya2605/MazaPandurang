@@ -211,7 +211,7 @@ class AuthService extends ChangeNotifier {
       final res = await http.get(
         Uri.parse('$_baseUrl/profiles/$userId'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 3));
 
       if (res.statusCode == 200) {
         _currentProfile = jsonDecode(res.body);
@@ -219,8 +219,45 @@ class AuthService extends ChangeNotifier {
         return _currentProfile;
       }
     } catch (e) {
-      debugPrint('Failed to fetch profile: $e');
+      debugPrint('Failed to fetch profile from Express backend: $e');
     }
+
+    // Direct Supabase Database Fallback
+    if (isSupabaseInitialized) {
+      try {
+        final res = await Supabase.instance.client
+            .from('profiles')
+            .select()
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (res != null) {
+          _currentProfile = Map<String, dynamic>.from(res);
+          notifyListeners();
+          return _currentProfile;
+        }
+      } catch (e) {
+        debugPrint('Direct Supabase profile lookup error: $e');
+      }
+    }
+
+    // Auth Metadata Fallback
+    final user = currentUser;
+    if (user != null && user.id == userId) {
+      _currentProfile = {
+        'id': user.id,
+        'email': user.email ?? '',
+        'display_name': user.userMetadata?['full_name'] ??
+            user.userMetadata?['display_name'] ??
+            user.email?.split('@')[0] ??
+            'Warkari Pilgrim',
+        'role': user.userMetadata?['role'] ?? 'pilgrim',
+        'status': 'active',
+      };
+      notifyListeners();
+      return _currentProfile;
+    }
+
     return null;
   }
 

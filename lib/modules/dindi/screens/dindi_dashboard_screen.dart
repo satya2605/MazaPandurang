@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../common/constants/app_colors.dart';
+import '../../pilgrim/widgets/pilgrim_profile_modal.dart';
 import '../services/dindi_state_service.dart';
 import 'create_dindi_screen.dart';
 import 'dindi_announcements_screen.dart';
@@ -209,6 +210,11 @@ class _DindiDashboardScreenState extends State<DindiDashboardScreen> {
                 onPressed: () => _navigateToMembers(
                   initialTab: pendingRequests > 0 ? 0 : 1,
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.account_circle_outlined),
+                tooltip: 'My Profile',
+                onPressed: () => PilgrimProfileModal.show(context),
               ),
             ],
           ),

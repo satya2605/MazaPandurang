@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../pilgrim/widgets/pilgrim_profile_modal.dart';
 import '../models/ngo_organization.dart';
 import '../models/ngo_service.dart';
 import '../services/ngo_repository.dart';
@@ -157,6 +158,11 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             tooltip: 'Register New NGO',
             icon: const Icon(Icons.app_registration),
             onPressed: _openRegistration,
+          ),
+          IconButton(
+            tooltip: 'My Profile',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => PilgrimProfileModal.show(context),
           ),
         ],
       ),
