@@ -42,7 +42,7 @@ class InMemoryDindiRepository implements DindiRepository {
         currentHalt: 'Akurdi Vitthal Mandir',
         roadStatus: 'Clear & Moving',
         joinCode: 'TK12W4',
-        leaderUserId: 'leader-sanket-1',
+        leaderUserId: '00000000-0000-0000-0000-000000000002',
       ),
     );
 
@@ -187,7 +187,7 @@ class InMemoryDindiRepository implements DindiRepository {
         currentHalt: 'Saswad Sangam',
         roadStatus: 'Slow',
         joinCode: 'DN18W4',
-        leaderUserId: 'leader-sanket-1',
+        leaderUserId: '00000000-0000-0000-0000-000000000002',
       ),
     );
 

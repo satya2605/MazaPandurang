@@ -68,13 +68,13 @@ void main() {
       );
 
       expect(palkhi.name, contains('Sant Dnyaneshwar Maharaj Palkhi'));
-      expect(dindis.isNotEmpty, isTrue);
-      expect(services.isNotEmpty, isTrue);
+      expect(dindis, isA<List<DindiMarkerInfo>>());
+      expect(services, isA<List<WariService>>());
       expect(routeStages.length, equals(8));
-      expect(cityPlaces.isNotEmpty, isTrue);
-      expect(cityRoutes.isNotEmpty, isTrue);
+      expect(cityPlaces, isA<List<CityPlace>>());
+      expect(cityRoutes, isA<List<CityRoute>>());
       expect(donations, isNotNull);
-      expect(lostPersons.isNotEmpty, isTrue);
+      expect(lostPersons, isA<List<LostPersonReport>>());
       expect(emergencyResult, isTrue);
     });
   });

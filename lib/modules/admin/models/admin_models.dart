@@ -171,6 +171,12 @@ class AdminDindiLeader {
   final String phone;
   final String status;
   final List<dynamic> dindis;
+  final String? dindiName;
+  final String? startPoint;
+  final String? destination;
+  final int? memberCount;
+  final String? dindiNumber;
+  final String? createdAt;
 
   const AdminDindiLeader({
     required this.id,
@@ -179,16 +185,36 @@ class AdminDindiLeader {
     required this.phone,
     required this.status,
     required this.dindis,
+    this.dindiName,
+    this.startPoint,
+    this.destination,
+    this.memberCount,
+    this.dindiNumber,
+    this.createdAt,
   });
 
   factory AdminDindiLeader.fromJson(Map<String, dynamic> json) {
+    final dindisList = json['dindis'] as List<dynamic>? ?? [];
+    Map<String, dynamic>? firstDindi;
+    if (dindisList.isNotEmpty && dindisList.first is Map<String, dynamic>) {
+      firstDindi = dindisList.first as Map<String, dynamic>;
+    } else if (dindisList.isNotEmpty && dindisList.first is Map) {
+      firstDindi = Map<String, dynamic>.from(dindisList.first as Map);
+    }
+
     return AdminDindiLeader(
       id: json['id']?.toString() ?? '',
       displayName: json['display_name']?.toString() ?? json['name']?.toString() ?? 'Applicant',
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
       status: json['status']?.toString() ?? 'pending',
-      dindis: json['dindis'] as List<dynamic>? ?? [],
+      dindis: dindisList,
+      dindiName: firstDindi?['name']?.toString(),
+      startPoint: firstDindi?['start_point']?.toString() ?? firstDindi?['startPoint']?.toString(),
+      destination: firstDindi?['destination']?.toString(),
+      memberCount: (firstDindi?['member_count'] as num?)?.toInt() ?? (firstDindi?['memberCount'] as num?)?.toInt(),
+      dindiNumber: firstDindi?['dindi_number']?.toString() ?? firstDindi?['dindiNumber']?.toString(),
+      createdAt: json['created_at']?.toString() ?? json['updated_at']?.toString(),
     );
   }
 }

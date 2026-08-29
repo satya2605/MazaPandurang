@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maza_pandurang/modules/dindi/repositories/in_memory_dindi_repository.dart';
 import 'package:maza_pandurang/modules/dindi/screens/dindi_announcements_screen.dart';
 import 'package:maza_pandurang/modules/dindi/screens/dindi_dashboard_screen.dart';
+import 'package:maza_pandurang/modules/dindi/services/dindi_identity_provider.dart';
 import 'package:maza_pandurang/modules/dindi/services/dindi_state_service.dart';
 
 void main() {
-  setUp(() {
-    DindiStateService().resetDemoData();
+  setUp(() async {
+    InMemoryDindiRepository.instance.reset();
+    final service = DindiStateService(
+      repository: InMemoryDindiRepository.instance,
+      identityProvider: const DevDindiIdentityProvider(),
+    );
+    service.resetState();
+    await service.loadDindis();
   });
 
   group('Dindi Announcements & Join Sharing — Phase 4 Tests', () {

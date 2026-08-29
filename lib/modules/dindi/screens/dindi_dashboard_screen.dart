@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../common/constants/app_colors.dart';
 import '../services/dindi_state_service.dart';
+import 'create_dindi_screen.dart';
 import 'dindi_announcements_screen.dart';
 import 'dindi_members_screen.dart';
 import 'dindi_profile_screen.dart';
+import 'my_dindis_screen.dart';
 
 class DindiDashboardScreen extends StatefulWidget {
   const DindiDashboardScreen({super.key});
@@ -23,6 +25,24 @@ class _DindiDashboardScreenState extends State<DindiDashboardScreen> {
         content: Text('Join Code "$code" copied to clipboard!'),
         backgroundColor: AppColors.dindiAccent,
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _navigateToCreateDindi() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CreateDindiScreen(),
+      ),
+    );
+  }
+
+  void _navigateToMyDindis() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const MyDindisScreen(),
       ),
     );
   }
@@ -75,6 +95,86 @@ class _DindiDashboardScreenState extends State<DindiDashboardScreen> {
     return AnimatedBuilder(
       animation: _service,
       builder: (context, _) {
+        if (_service.dindis.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Dindi Leader Dashboard'),
+              backgroundColor: AppColors.dindiAccent,
+              foregroundColor: Colors.white,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh Dindis',
+                  onPressed: () => _service.loadDindis(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Create Dindi',
+                  onPressed: _navigateToCreateDindi,
+                ),
+              ],
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppColors.dindiAccent.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.groups_outlined,
+                        size: 64,
+                        color: AppColors.dindiAccent,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'No Dindis Found',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'You have not registered any Dindis yet. Create a Dindi troupe to begin managing your route, members, and live status.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _navigateToCreateDindi,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create New Dindi'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.dindiAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         final dindi = _service.dindiGroup;
         final totalMembers = _service.totalMemberCount;
         final pendingRequests = _service.pendingRequestCount;
@@ -88,6 +188,11 @@ class _DindiDashboardScreenState extends State<DindiDashboardScreen> {
             backgroundColor: AppColors.dindiAccent,
             foregroundColor: Colors.white,
             actions: [
+              IconButton(
+                icon: const Icon(Icons.swap_horiz),
+                tooltip: 'My Dindis / Switch Dindi',
+                onPressed: _navigateToMyDindis,
+              ),
               IconButton(
                 icon: const Icon(Icons.campaign),
                 tooltip: 'Announcements',

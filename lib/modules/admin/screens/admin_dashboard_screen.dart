@@ -419,10 +419,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              _buildStatCard('Pending NGOs', '${stats?.pendingNgos ?? 0}', Colors.orange, 1),
-              _buildStatCard('Pending Services', '${stats?.pendingServices ?? 0}', Colors.deepOrange, 2),
-              _buildStatCard('Pending Dindi Leaders', '${stats?.pendingDindiLeaders ?? 0}', Colors.blue, 3),
-              _buildStatCard('Pending Dindis', '${stats?.pendingDindis ?? 0}', Colors.indigo, 3),
+              _buildStatCard('Pending NGOs', '${stats?.pendingNgos ?? 0}', Colors.orange, 1, onFilter: () => setState(() => _ngoFilter = 'PENDING')),
+              _buildStatCard('Pending Services', '${stats?.pendingServices ?? 0}', Colors.deepOrange, 2, onFilter: () => setState(() => _serviceFilter = 'GATE1_PENDING')),
+              _buildStatCard('Pending Dindi Leaders', '${stats?.pendingDindiLeaders ?? 0}', Colors.blue, 3, onFilter: () => setState(() => _dindiLeaderFilter = 'PENDING')),
+              _buildStatCard('Pending Dindis', '${stats?.pendingDindis ?? 0}', Colors.indigo, 3, onFilter: () => setState(() => _dindiLeaderFilter = 'PENDING')),
               _buildStatCard('Lost Person Cases', '${stats?.pendingLostPersonReports ?? 0}', Colors.red, 4),
               _buildStatCard('Service Reports', '${stats?.openServiceReports ?? 0}', Colors.amber, 5),
               _buildStatCard('Active Emergencies', '${stats?.activeEmergencies ?? 0}', Colors.purple, 0),
@@ -434,9 +434,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, int targetTabIndex) {
+  Widget _buildStatCard(String label, String value, Color color, int targetTabIndex, {VoidCallback? onFilter}) {
     return InkWell(
-      onTap: () => _tabController.animateTo(targetTabIndex),
+      onTap: () {
+        if (onFilter != null) onFilter();
+        _tabController.animateTo(targetTabIndex);
+      },
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -632,6 +635,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildDindiLeadersTab() {
+    final pendingApplications = _dindiLeaders.where((l) => l.status.toLowerCase() == 'pending').toList();
     final filtered = _dindiLeaders.where((l) {
       if (_dindiLeaderFilter == 'ALL') return true;
       return l.status.toUpperCase() == _dindiLeaderFilter;
@@ -661,7 +665,198 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
+              // 1. Prominent Pending Applications Banner
+              if (pendingApplications.isNotEmpty && _dindiLeaderFilter != 'ACTIVE' && _dindiLeaderFilter != 'SUSPENDED') ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber.shade400),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.hourglass_top, color: Colors.amber.shade900),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${pendingApplications.length} Pending Dindi Leader Application(s) Awaiting Admin Verification',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade900, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('Dindi Leader Applications', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+
+              if (filtered.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No Dindi Leader applications matching filter.'),
+                )
+              else
+                ...filtered.map((leader) {
+                  final isPending = leader.status.toLowerCase() == 'pending';
+                  final isActive = leader.status.toLowerCase() == 'active';
+                  final isSuspended = leader.status.toLowerCase() == 'suspended';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    elevation: isPending ? 3 : 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isPending
+                            ? Colors.amber.shade600
+                            : isSuspended
+                                ? Colors.red.shade300
+                                : Colors.grey.shade300,
+                        width: isPending ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  leader.displayName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isPending
+                                      ? Colors.amber.shade100
+                                      : isActive
+                                          ? Colors.green.shade100
+                                          : Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  leader.status.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isPending
+                                        ? Colors.amber.shade900
+                                        : isActive
+                                            ? Colors.green.shade900
+                                            : Colors.red.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.phone, size: 14, color: Colors.grey),
+                              const SizedBox(width: 6),
+                              Text(leader.phone.isNotEmpty ? leader.phone : 'No phone provided', style: const TextStyle(fontSize: 13)),
+                              const SizedBox(width: 16),
+                              const Icon(Icons.email, size: 14, color: Colors.grey),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  leader.email.isNotEmpty ? leader.email : 'No email provided',
+                                  style: const TextStyle(fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (leader.dindiName != null && leader.dindiName!.isNotEmpty) ...[
+                            const Divider(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.groups, size: 16, color: Colors.blue),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'Troupe: ${leader.dindiName}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (leader.startPoint != null || leader.destination != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Route: ${leader.startPoint ?? "Alandi"} ➔ ${leader.destination ?? "Pandharpur"}'
+                                      '${leader.memberCount != null ? " • Expected Varkaris: ${leader.memberCount}" : ""}',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (isPending) ...[
+                                OutlinedButton.icon(
+                                  onPressed: () => _handleDindiLeaderReject(leader.id),
+                                  icon: const Icon(Icons.close, size: 14, color: Colors.red),
+                                  label: const Text('Reject', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton.icon(
+                                  onPressed: () => _handleDindiLeaderApprove(leader.id),
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                  icon: const Icon(Icons.check, size: 14, color: Colors.white),
+                                  label: const Text(
+                                    'Approve / Authenticate',
+                                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                              if (isActive)
+                                OutlinedButton.icon(
+                                  onPressed: () => _handleDindiLeaderSuspend(leader.id),
+                                  icon: const Icon(Icons.block, size: 14, color: Colors.orange),
+                                  label: const Text('Suspend Access', style: TextStyle(color: Colors.orange, fontSize: 12)),
+                                ),
+                              if (isSuspended)
+                                ElevatedButton.icon(
+                                  onPressed: () => _handleDindiLeaderApprove(leader.id),
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                  icon: const Icon(Icons.refresh, size: 14, color: Colors.white),
+                                  label: const Text('Re-instate / Unsuspend', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+
               if (_dindis.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text('Registered Dindi Troupes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -672,7 +867,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       title: Text('${dindi.dindiNumber} — ${dindi.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Leader: ${dindi.leaderName} (${dindi.leaderPhone})\nRoute: ${dindi.startPoint} ➔ ${dindi.destination} | Members: ${dindi.memberCount}\nStatus: ${dindi.status.toUpperCase()}'),
+                      subtitle: Text(
+                        'Leader: ${dindi.leaderName} (${dindi.leaderPhone})\nRoute: ${dindi.startPoint} ➔ ${dindi.destination} | Members: ${dindi.memberCount}\nStatus: ${dindi.status.toUpperCase()}',
+                      ),
                       isThreeLine: true,
                       trailing: Wrap(
                         spacing: 6,
@@ -693,52 +890,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ),
                   );
                 }),
-                const Divider(),
               ],
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('Dindi Leader Applications', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              if (filtered.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No Dindi Leader applications matching filter.'),
-                )
-              else
-                ...filtered.map((leader) {
-                  final isPending = leader.status.toLowerCase() == 'pending';
-                  final isActive = leader.status.toLowerCase() == 'active';
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      title: Text(leader.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Email: ${leader.email} | Phone: ${leader.phone}\nStatus: ${leader.status.toUpperCase()}'),
-                      isThreeLine: true,
-                      trailing: Wrap(
-                        spacing: 6,
-                        children: [
-                          if (isPending) ...[
-                            ElevatedButton(
-                              onPressed: () => _handleDindiLeaderApprove(leader.id),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                              child: const Text('Approve', style: TextStyle(fontSize: 11)),
-                            ),
-                            OutlinedButton(
-                              onPressed: () => _handleDindiLeaderReject(leader.id),
-                              child: const Text('Reject', style: TextStyle(fontSize: 11, color: Colors.red)),
-                            ),
-                          ],
-                          if (isActive)
-                            OutlinedButton(
-                              onPressed: () => _handleDindiLeaderSuspend(leader.id),
-                              child: const Text('Suspend', style: TextStyle(fontSize: 11, color: Colors.orange)),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
             ],
           ),
         ),

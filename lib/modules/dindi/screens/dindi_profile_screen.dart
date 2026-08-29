@@ -21,12 +21,21 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
   late TextEditingController _destinationController;
   late TextEditingController _haltController;
   late String _selectedRoadStatus;
+  late String _selectedLifecycleStatus;
+
+  bool _isSaving = false;
 
   static const List<String> _roadStatusOptions = [
     'Clear & Moving',
     'Slow',
     'Crowded',
     'Temporarily Blocked',
+  ];
+
+  static const List<String> _lifecycleStatusOptions = [
+    'Active',
+    'Halted',
+    'Completed',
   ];
 
   @override
@@ -43,6 +52,9 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
     _selectedRoadStatus = _roadStatusOptions.contains(dindi.roadStatus)
         ? dindi.roadStatus
         : _roadStatusOptions.first;
+    _selectedLifecycleStatus = _lifecycleStatusOptions.contains(dindi.status)
+        ? dindi.status
+        : _lifecycleStatusOptions.first;
   }
 
   @override
@@ -57,9 +69,17 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfile() {
-    if (_formKey.currentState?.validate() ?? false) {
-      _service.updateDindiProfile(
+  Future<void> _saveProfile() async {
+    if (!(_formKey.currentState?.validate() ?? false) || _isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await _service.updateDindiProfile(
         name: _nameController.text.trim(),
         dindiNumber: _numberController.text.trim(),
         leaderName: _leaderNameController.text.trim(),
@@ -68,7 +88,10 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
         destination: _destinationController.text.trim(),
         currentHalt: _haltController.text.trim(),
         roadStatus: _selectedRoadStatus,
+        status: _selectedLifecycleStatus,
       );
+
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -79,6 +102,20 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
       );
 
       Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update Dindi: $e'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 
@@ -96,6 +133,19 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
     }
   }
 
+  Color _getLifecycleStatusColor(String status) {
+    switch (status) {
+      case 'Active':
+        return Colors.green.shade700;
+      case 'Halted':
+        return Colors.amber.shade800;
+      case 'Completed':
+        return Colors.blue.shade700;
+      default:
+        return AppColors.dindiAccent;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,9 +155,18 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.check),
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.check),
             tooltip: 'Save',
-            onPressed: _saveProfile,
+            onPressed: _isSaving ? null : _saveProfile,
           ),
         ],
       ),
@@ -132,9 +191,9 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
-                    labelText: 'Dindi Name *',
+                    labelText: 'Dindi Troupe Name *',
                     hintText: 'e.g. Shree Tukaram Maharaj Dindi',
-                    prefixIcon: const Icon(Icons.flag_outlined),
+                    prefixIcon: const Icon(Icons.group_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -150,9 +209,9 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
                 TextFormField(
                   controller: _numberController,
                   decoration: InputDecoration(
-                    labelText: 'Dindi Registration / Number *',
-                    hintText: 'e.g. 12',
-                    prefixIcon: const Icon(Icons.numbers),
+                    labelText: 'Dindi Number *',
+                    hintText: 'e.g. 12 or DND-001',
+                    prefixIcon: const Icon(Icons.numbers_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -162,6 +221,62 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
                       return 'Please enter Dindi number';
                     }
                     return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Dindi Lifecycle Status Section
+                const Text(
+                  'Dindi Lifecycle Status',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Set current operational lifecycle state for this Dindi:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedLifecycleStatus,
+                  decoration: InputDecoration(
+                    labelText: 'Operational Status *',
+                    prefixIcon: Icon(
+                      Icons.flag_outlined,
+                      color: _getLifecycleStatusColor(_selectedLifecycleStatus),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  items: _lifecycleStatusOptions.map((status) {
+                    return DropdownMenuItem<String>(
+                      value: status,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 12,
+                            color: _getLifecycleStatusColor(status),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(status),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedLifecycleStatus = value;
+                      });
+                    }
                   },
                 ),
                 const SizedBox(height: 20),
@@ -179,8 +294,8 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
                 TextFormField(
                   controller: _leaderNameController,
                   decoration: InputDecoration(
-                    labelText: 'Leader Name *',
-                    hintText: 'e.g. Sanket Patil',
+                    labelText: 'Leader Display Name *',
+                    hintText: 'e.g. Sanket Maharaj',
                     prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -196,21 +311,18 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _phoneController,
+                  keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    labelText: 'Leader Phone / Contact *',
-                    hintText: 'e.g. +91 98220 12345',
+                    labelText: 'Leader Phone *',
+                    hintText: '+91 98220 12345',
                     prefixIcon: const Icon(Icons.phone_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  keyboardType: TextInputType.phone,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter leader contact';
-                    }
-                    if (value.trim().length < 8) {
-                      return 'Please enter a valid phone number';
+                      return 'Please enter contact phone';
                     }
                     return null;
                   },
@@ -348,7 +460,7 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
 
                 // Save Button
                 ElevatedButton.icon(
-                  onPressed: _saveProfile,
+                  onPressed: _isSaving ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.dindiAccent,
                     foregroundColor: Colors.white,
@@ -357,10 +469,19 @@ class _DindiProfileScreenState extends State<DindiProfileScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text(
-                    'Save Dindi Information',
-                    style: TextStyle(
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(
+                    _isSaving ? 'Saving Changes...' : 'Save Dindi Information',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),

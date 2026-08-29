@@ -1,21 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maza_pandurang/modules/dindi/dindi_module.dart';
+import 'package:maza_pandurang/modules/dindi/repositories/in_memory_dindi_repository.dart';
 import 'package:maza_pandurang/modules/dindi/screens/dindi_dashboard_screen.dart';
+import 'package:maza_pandurang/modules/dindi/screens/dindi_gatekeeper_screen.dart';
+import 'package:maza_pandurang/modules/dindi/services/dindi_identity_provider.dart';
 import 'package:maza_pandurang/modules/dindi/services/dindi_state_service.dart';
 
 void main() {
-  setUp(() {
-    DindiStateService().resetDemoData();
+  setUp(() async {
+    InMemoryDindiRepository.instance.reset();
+    final service = DindiStateService(
+      repository: InMemoryDindiRepository.instance,
+      identityProvider: const DevDindiIdentityProvider(),
+    );
+    service.resetState();
+    await service.loadDindis();
   });
 
-  group('Dindi Leader Dashboard — Phase 1 Tests', () {
-    testWidgets(
-        'DindiModule screen renders DindiDashboardScreen with all required fields',
+  group('Dindi Leader Dashboard — Phase 1 & 7A Entry Tests', () {
+    testWidgets('DindiModule.screen() renders DindiGatekeeperScreen as entry point',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: DindiModule.screen(),
+        ),
+      );
+
+      // Verify DindiGatekeeperScreen is the module entry point
+      expect(find.byType(DindiGatekeeperScreen), findsOneWidget);
+    });
+
+    testWidgets(
+        'DindiDashboardScreen renders with all required fields for active Dindi',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: DindiDashboardScreen(),
         ),
       );
 
@@ -51,8 +72,12 @@ void main() {
       expect(find.text('5'), findsOneWidget);
     });
 
-    test('DindiStateService maintains deterministic initial demo state', () {
-      final service = DindiStateService();
+    test('DindiStateService loads repository data properly', () async {
+      final service = DindiStateService(
+        repository: InMemoryDindiRepository.instance,
+      );
+      service.resetState();
+      await service.loadDindis();
       expect(service.dindiGroup.name, 'Shree Tukaram Maharaj Dindi');
       expect(service.dindiGroup.dindiNumber, '12');
       expect(service.dindiGroup.leaderName, 'Sanket Patil');
