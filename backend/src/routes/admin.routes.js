@@ -21,6 +21,11 @@ import {
   getAdminUsers,
   updateUserStatus,
   getAdminAuditLogs,
+  getAdminDindiLeaders,
+  getAdminDindiLeaderById,
+  approveDindiLeader,
+  rejectDindiLeader,
+  suspendDindiLeader,
 } from '../controllers/admin.controller.js';
 
 const router = Router();
@@ -55,6 +60,13 @@ router.patch('/dindis/:id/suspend', suspendDindi);
 router.get('/lost-persons', getAdminLostPersons);
 router.patch('/lost-persons/:id/approve', approveLostPerson);
 router.patch('/lost-persons/:id/reject', rejectLostPerson);
+
+// Dindi Leader Moderation & Approval
+router.get('/dindi-leaders', getAdminDindiLeaders);
+router.get('/dindi-leaders/:id', getAdminDindiLeaderById);
+router.patch('/dindi-leaders/:id/approve', approveDindiLeader);
+router.patch('/dindi-leaders/:id/reject', rejectDindiLeader);
+router.patch('/dindi-leaders/:id/suspend', suspendDindiLeader);
 
 // User Governance
 router.get('/users', getAdminUsers);

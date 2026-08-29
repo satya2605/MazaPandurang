@@ -92,11 +92,22 @@ export async function createDindi(req, res, next) {
       join_code,
     } = req.body;
 
+    if (req.user && req.user.role !== 'admin') {
+      if (req.user.role !== 'dindi_leader') {
+        return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Only Dindi Leaders can create Dindis.' } });
+      }
+      if (req.user.status !== 'active') {
+        return res.status(403).json({ error: { code: 'PENDING_APPROVAL', message: 'Dindi Leader account awaiting Admin approval.' } });
+      }
+    }
+
+    const effectiveLeaderId = req.user?.id || leader_id || null;
+
     const client = getSupabaseClient();
     const payload = {
       dindi_number: dindi_number || `DND-${Date.now()}`,
       name: name || 'Wari Dindi Troupe',
-      leader_id: leader_id || null,
+      leader_id: effectiveLeaderId,
       member_count: member_count || 1,
       current_location_name: current_location_name || 'Alandi',
       latitude: latitude || 18.6772,

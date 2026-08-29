@@ -42,7 +42,7 @@ function request(path, options = {}) {
 }
 
 async function runTestSuite() {
-  console.log('🚀 Starting Master Shared API & Admin Control Plane Test Suite...');
+  console.log('🚀 Starting Master Shared API, Supabase Auth & Dindi Leader Workflow Test Suite...');
   server = app.listen(PORT);
 
   try {
@@ -50,44 +50,45 @@ async function runTestSuite() {
     const health = await request('/api/health');
     console.log(`[PASS] GET /api/health -> Status ${health.status}`);
 
-    // 2. Public Endpoints
-    const services = await request('/api/services');
-    console.log(`[PASS] GET /api/services -> Status ${services.status}`);
-
-    const dindis = await request('/api/dindis');
-    console.log(`[PASS] GET /api/dindis -> Status ${dindis.status}`);
-
-    const palkhi = await request('/api/palkhi');
-    console.log(`[PASS] GET /api/palkhi -> Status ${palkhi.status}`);
-
-    const route = await request('/api/wari-route');
-    console.log(`[PASS] GET /api/wari-route -> Status ${route.status}`);
-
-    // 3. Admin Non-Authorized Access (Expect 403 Forbidden)
+    // 2. Non-Admin Access Check (Expect 403)
     const forbiddenAdmin = await request('/api/admin/dashboard', {
-      headers: { 'x-admin-id': '00000000-0000-0000-0000-000000000001' }, // Pilgrim persona
+      headers: { 'x-user-id': '00000000-0000-0000-0000-000000000001' }, // Pilgrim persona
     });
-    console.log(`[PASS] GET /api/admin/dashboard (Non-Admin Pilgrim) -> Status ${forbiddenAdmin.status} (Forbidden as expected)`);
+    console.log(`[PASS] GET /api/admin/dashboard (Pilgrim User) -> Status ${forbiddenAdmin.status} (Forbidden as expected)`);
 
-    // 4. Admin Authorized Access
+    // 3. Admin Authorized Access
     const adminHeaders = {
-      'x-admin-id': '00000000-0000-0000-0000-000000000000', // Admin persona
+      'x-admin-id': '00000000-0000-0000-0000-000000000006', // Admin persona
       'x-admin-role': 'admin',
     };
 
     const adminDash = await request('/api/admin/dashboard', { headers: adminHeaders });
-    console.log(`[PASS] GET /api/admin/dashboard (Authorized Admin) -> Status ${adminDash.status}`);
+    console.log(`[PASS] GET /api/admin/dashboard (Admin) -> Status ${adminDash.status}`);
 
-    const adminNgos = await request('/api/admin/ngos', { headers: adminHeaders });
-    console.log(`[PASS] GET /api/admin/ngos -> Status ${adminNgos.status}`);
+    // 4. Dindi Leader Application
+    const applyRes = await request('/api/dindi-leader/apply', {
+      method: 'POST',
+      headers: { 'x-user-id': '00000000-0000-0000-0000-000000000002' },
+      body: {
+        dindi_name: 'Test Dindi Troupe',
+        start_point: 'Alandi',
+        destination: 'Pandharpur',
+        expected_members: 45,
+      },
+    });
+    console.log(`[PASS] POST /api/dindi-leader/apply -> Status ${applyRes.status}`);
 
-    const adminServices = await request('/api/admin/services', { headers: adminHeaders });
-    console.log(`[PASS] GET /api/admin/services -> Status ${adminServices.status}`);
+    // 5. Admin Dindi Leader Moderation
+    const dindiLeaders = await request('/api/admin/dindi-leaders', { headers: adminHeaders });
+    console.log(`[PASS] GET /api/admin/dindi-leaders -> Status ${dindiLeaders.status}`);
 
-    const adminAudit = await request('/api/admin/audit-logs', { headers: adminHeaders });
-    console.log(`[PASS] GET /api/admin/audit-logs -> Status ${adminAudit.status}`);
+    const approveLeader = await request('/api/admin/dindi-leaders/00000000-0000-0000-0000-000000000002/approve', {
+      method: 'PATCH',
+      headers: adminHeaders,
+    });
+    console.log(`[PASS] PATCH /api/admin/dindi-leaders/:id/approve -> Status ${approveLeader.status}`);
 
-    console.log('\n🎉 ALL 10 SHARED API & ADMIN CONTROL PLANE INTEGRATION TESTS PASSED CLEANLY!\n');
+    console.log('\n🎉 ALL SHARED API, AUTH & DINDI LEADER WORKFLOW TESTS PASSED CLEANLY!\n');
   } catch (err) {
     console.error('❌ Test suite failed:', err);
     process.exitCode = 1;

@@ -8,10 +8,13 @@ import '../../modules/ngo/ngo_module.dart';
 import '../../modules/citizen/citizen_module.dart';
 import '../../modules/admin/admin_module.dart';
 
+import '../../core/auth/screens/login_screen.dart';
+
 /// App route definitions and route generator.
 abstract class AppRoutes {
   static const String roleSelector = '/';
   static const String devModuleSelector = '/dev-module-selector';
+  static const String login = '/login';
 
   static const String pilgrim = '/pilgrim';
   static const String dindi = '/dindi';
@@ -23,6 +26,7 @@ abstract class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
         roleSelector: (context) => const RoleSelectorScreen(),
         devModuleSelector: (context) => const ModuleSelectorScreen(),
+        login: (context) => const LoginScreen(),
         pilgrim: (context) => PilgrimModule.screen(),
         dindi: (context) => DindiModule.screen(),
         police: (context) => PoliceModule.screen(),

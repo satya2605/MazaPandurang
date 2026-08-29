@@ -25,6 +25,7 @@ export async function getAdminDashboard(req, res, next) {
       { count: pendingNgos },
       { count: pendingServices },
       { count: pendingDindis },
+      { count: pendingDindiLeaders },
       { count: pendingLostPersons },
       { count: openServiceReports },
       { count: activeEmergencies },
@@ -33,6 +34,7 @@ export async function getAdminDashboard(req, res, next) {
       client.from('ngos').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       client.from('services').select('*', { count: 'exact', head: true }).eq('is_verified', false),
       client.from('dindis').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
+      client.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'dindi_leader').eq('status', 'pending'),
       client.from('lost_person_reports').select('*', { count: 'exact', head: true }).eq('is_approved_by_admin', false),
       client.from('service_reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       client.from('emergency_requests').select('*', { count: 'exact', head: true }).neq('status', 'resolved'),
@@ -43,6 +45,7 @@ export async function getAdminDashboard(req, res, next) {
       pending_ngos: pendingNgos || 0,
       pending_services: pendingServices || 0,
       pending_dindis: pendingDindis || 0,
+      pending_dindi_leaders: pendingDindiLeaders || 0,
       pending_lost_person_reports: pendingLostPersons || 0,
       open_service_reports: openServiceReports || 0,
       active_emergencies: activeEmergencies || 0,
@@ -429,3 +432,116 @@ export async function getAdminAuditLogs(req, res, next) {
     res.json([]);
   }
 }
+
+// 8. DINDI LEADER MODERATION
+export async function getAdminDindiLeaders(req, res, next) {
+  try {
+    const { status } = req.query;
+    const client = getSupabaseClient();
+
+    let query = client.from('profiles').select('*, dindis(id, name, dindi_number, status)').eq('role', 'dindi_leader');
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAdminDindiLeaderById(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .select('*, dindis(*)')
+      .eq('id', id)
+      .eq('role', 'dindi_leader')
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Dindi Leader profile not found' });
+      throw error;
+    }
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function approveDindiLeader(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Automatically approve corresponding pending Dindi if present
+    await client.from('dindis').update({ status: 'Active' }).eq('leader_id', id);
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'APPROVE_DINDI_LEADER', 'profile', id);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectDindiLeader(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'REJECT_DINDI_LEADER', 'profile', id, reason || 'Dindi leader application rejected');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function suspendDindiLeader(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ status: 'suspended', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Also suspend Dindis led by this leader
+    await client.from('dindis').update({ status: 'Suspended' }).eq('leader_id', id);
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'SUSPEND_DINDI_LEADER', 'profile', id, reason || 'Dindi leader suspended');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
