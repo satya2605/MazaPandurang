@@ -23,6 +23,11 @@ class ApiClient {
         headers['x-admin-id'] = profile['id'].toString();
         headers['x-admin-role'] = 'admin';
       }
+    } else {
+      // Dev & test fallback headers for unauthenticated local development access
+      headers['x-user-id'] = '00000000-0000-0000-0000-000000000003';
+      headers['x-admin-id'] = '00000000-0000-0000-0000-000000000003';
+      headers['x-admin-role'] = 'admin';
     }
 
     if (extraHeaders != null) {

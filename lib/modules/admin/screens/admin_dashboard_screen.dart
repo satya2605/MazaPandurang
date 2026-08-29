@@ -1003,6 +1003,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   if (success) {
                                     _showMessage('Palkhi published to public live map.');
                                     _fetchAllData();
+                                  } else {
+                                    _showMessage('Failed to publish Palkhi.', isError: true);
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
@@ -1016,6 +1018,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   if (success) {
                                     _showMessage('Palkhi unpublished from public view.');
                                     _fetchAllData();
+                                  } else {
+                                    _showMessage('Failed to unpublish Palkhi.', isError: true);
                                   }
                                 },
                                 icon: const Icon(Icons.visibility_off, size: 16),
@@ -1049,6 +1053,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   if (success) {
                                     _showMessage('Palkhi deleted.');
                                     _fetchAllData();
+                                  } else {
+                                    _showMessage('Failed to delete Palkhi.', isError: true);
                                   }
                                 }
                               },
@@ -1102,6 +1108,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               if (success) {
                 _showMessage('New Palkhi entity created (Unpublished by default).');
                 _fetchAllData();
+              } else {
+                _showMessage('Failed to create Palkhi. Check API logs.', isError: true);
               }
             },
             child: const Text('Create'),
@@ -1143,6 +1151,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 if (success) {
                   _showMessage('Operator assignment removed.');
                   _fetchAllData();
+                } else {
+                  _showMessage('Failed to remove operator assignment.', isError: true);
                 }
               },
               child: const Text('Remove Operator', style: TextStyle(color: Colors.red)),
@@ -1156,6 +1166,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 if (success) {
                   _showMessage('Location Operator assigned successfully.');
                   _fetchAllData();
+                } else {
+                  _showMessage('Failed to assign Location Operator.', isError: true);
                 }
               }
             },
