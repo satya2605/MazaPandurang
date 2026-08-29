@@ -1,72 +1,77 @@
 import { getSupabaseClient } from '../db/supabase.js';
-import { findNearestService } from '../utils/geo.js';
 
-export async function createEmergencyRequest(req, res, next) {
+export async function getAllEmergencies(req, res, next) {
   try {
-    const { emergencyType, latitude, longitude, locationName, requesterId } = req.body;
-
-    const userLat = parseFloat(latitude);
-    const userLon = parseFloat(longitude);
-
-    if (isNaN(userLat) || isNaN(userLon)) {
-      return res.status(400).json({
-        success: false,
-        error: { message: 'Valid latitude and longitude coordinates required' },
-      });
-    }
-
-    const requestCode = `EMG-${Date.now()}`;
+    const { status } = req.query;
     const client = getSupabaseClient();
 
-    // Insert emergency request into Supabase
-    const { data: emergencyRecord, error: insertError } = await client
-      .from('emergency_requests')
-      .insert([
-        {
-          request_code: requestCode,
-          requester_id: requesterId || null,
-          emergency_type: emergencyType || 'Medical',
-          latitude: userLat,
-          longitude: userLon,
-          location_name: locationName || 'Unknown Wari Location',
-          status: 'pending',
-        },
-      ])
-      .select()
-      .maybeSingle();
-
-    if (insertError) {
-      console.warn('[Emergency Controller] Supabase insert warning:', insertError.message);
+    let query = client.from('emergency_requests').select('*');
+    if (status) {
+      query = query.eq('status', status);
     }
 
-    // Identify nearest medical or police service
-    const targetCategory = emergencyType === 'Police' ? 'Police' : 'Medical';
-    const { data: availableServices } = await client
-      .from('services')
-      .select('*')
-      .ilike('category', targetCategory);
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    next(err);
+  }
+}
 
-    const nearestService = findNearestService(userLat, userLon, availableServices || []);
+export async function createEmergency(req, res, next) {
+  try {
+    const { requester_id, emergency_type, latitude, longitude, location_name } = req.body;
+    const client = getSupabaseClient();
 
-    return res.status(201).json({
-      success: true,
-      message: `${emergencyType || 'Medical'} emergency request logged successfully`,
-      requestCode,
-      request: emergencyRecord || {
-        requestCode,
-        emergencyType: emergencyType || 'Medical',
-        latitude: userLat,
-        longitude: userLon,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      },
-      nearestService: nearestService || {
-        name: 'Saswad Central Medical Camp',
-        category: targetCategory,
-        contactPhone: '+919822011223',
-        distanceKm: 0.5,
-      },
+    const payload = {
+      request_code: `EMG-${Date.now()}`,
+      requester_id: requester_id || null,
+      emergency_type: emergency_type || 'Medical',
+      latitude: latitude || 18.3411,
+      longitude: longitude || 74.0305,
+      location_name: location_name || 'Wari Route Location',
+      status: 'pending',
+    };
+
+    const { data, error } = await client
+      .from('emergency_requests')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({
+      message: 'Emergency SOS request dispatched successfully.',
+      requestCode: data.request_code,
+      emergency: data,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateEmergency(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const client = getSupabaseClient();
+
+    const updates = {};
+    if (status !== undefined) updates.status = status;
+    if (status === 'resolved' || status === 'cancelled') {
+      updates.resolved_at = new Date().toISOString();
+    }
+
+    const { data, error } = await client
+      .from('emergency_requests')
+      .update(updates)
+      .or(`id.eq.${id},request_code.eq.${id}`)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     next(err);
   }
