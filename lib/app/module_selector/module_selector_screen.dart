@@ -65,6 +65,14 @@ class ModuleSelectorScreen extends StatelessWidget {
       color: AppColors.citizenAccent,
       icon: Icons.location_city,
     ),
+    ModuleCardData(
+      title: 'Admin Control Plane',
+      description: 'NGO & service verification, moderation & system governance',
+      owner: 'Lead Architect',
+      route: AppRoutes.admin,
+      color: Colors.purple,
+      icon: Icons.admin_panel_settings,
+    ),
   ];
 
   @override

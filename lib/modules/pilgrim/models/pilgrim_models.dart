@@ -200,3 +200,32 @@ class TilakChatMessage {
     this.targetRoute,
   });
 }
+
+/// Wari route stage information returned by GET /api/wari-route.
+class WariRouteStage {
+  final String id;
+  final String stageName;
+  final int sequenceOrder;
+  final WariLatLng position;
+
+  const WariRouteStage({
+    required this.id,
+    required this.stageName,
+    required this.sequenceOrder,
+    required this.position,
+  });
+
+  factory WariRouteStage.fromJson(Map<String, dynamic> json) {
+    return WariRouteStage(
+      id: json['id']?.toString() ?? '',
+      stageName:
+          json['stageName']?.toString() ?? json['stage_name']?.toString() ?? '',
+      sequenceOrder:
+          json['sequenceOrder'] as int? ?? json['sequence_order'] as int? ?? 0,
+      position: WariLatLng(
+        (json['latitude'] as num?)?.toDouble() ?? 18.3411,
+        (json['longitude'] as num?)?.toDouble() ?? 74.0305,
+      ),
+    );
+  }
+}

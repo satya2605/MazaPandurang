@@ -1,19 +1,20 @@
 import { Router } from 'express';
 import {
-  createLostPersonReport,
   getApprovedLostPersons,
-  getLostPersonById,
+  createLostPersonReport,
+  updateLostPersonReport,
   createSighting,
+  getSightings,
+  getSignedPhotoUrl,
 } from '../controllers/lostPersons.controller.js';
-import { uploadLostPersonImage } from '../controllers/storage.controller.js';
-import { uploadSingleImage } from '../middleware/uploadMiddleware.js';
 
 const router = Router();
 
-router.post('/', createLostPersonReport);
 router.get('/', getApprovedLostPersons);
-router.get('/:id', getLostPersonById);
+router.post('/', createLostPersonReport);
+router.patch('/:id', updateLostPersonReport);
 router.post('/:id/sightings', createSighting);
-router.post('/:id/images', uploadSingleImage, uploadLostPersonImage);
+router.get('/:id/sightings', getSightings);
+router.get('/:id/photo-url', getSignedPhotoUrl);
 
 export default router;

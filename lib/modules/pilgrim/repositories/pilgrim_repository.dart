@@ -7,6 +7,7 @@ abstract class PilgrimRepository {
   Future<List<DindiMarkerInfo>> getNearbyDindis();
   Future<List<WariService>> getServices({ServiceCategory? category});
   Future<WariService?> getServiceById(String serviceId);
+  Future<List<WariRouteStage>> getWariRoute();
   Future<List<BhaktiMediaItem>> getBhaktiContent({String? category});
   Future<TilakChatMessage> queryTilakAI(String prompt);
 }
