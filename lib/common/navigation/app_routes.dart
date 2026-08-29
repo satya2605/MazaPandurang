@@ -6,6 +6,7 @@ import '../../modules/dindi/dindi_module.dart';
 import '../../modules/police/police_module.dart';
 import '../../modules/ngo/ngo_module.dart';
 import '../../modules/citizen/citizen_module.dart';
+import '../../modules/admin/admin_module.dart';
 
 /// App route definitions and route generator.
 abstract class AppRoutes {
@@ -17,6 +18,7 @@ abstract class AppRoutes {
   static const String police = '/police';
   static const String ngo = '/ngo';
   static const String citizen = '/citizen';
+  static const String admin = '/admin';
 
   static Map<String, WidgetBuilder> get routes => {
         roleSelector: (context) => const RoleSelectorScreen(),
@@ -26,5 +28,6 @@ abstract class AppRoutes {
         police: (context) => PoliceModule.screen(),
         ngo: (context) => NgoModule.screen(),
         citizen: (context) => CitizenModule.screen(),
+        admin: (context) => AdminModule.screen(),
       };
 }

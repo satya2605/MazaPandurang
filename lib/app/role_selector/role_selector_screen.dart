@@ -78,6 +78,15 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen> {
       accentColor: AppColors.citizenAccent,
       route: AppRoutes.citizen,
     ),
+    RoleOption(
+      id: 'admin',
+      englishTitle: 'Admin Control Plane',
+      marathiTitle: 'प्रशासक',
+      description: 'Verification, approval & governance',
+      icon: Icons.admin_panel_settings,
+      accentColor: Colors.purple,
+      route: AppRoutes.admin,
+    ),
   ];
 
   void _onContinue() {
