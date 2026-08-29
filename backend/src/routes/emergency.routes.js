@@ -1,8 +1,14 @@
 import { Router } from 'express';
-import { createEmergencyRequest } from '../controllers/emergency.controller.js';
+import {
+  getAllEmergencies,
+  createEmergency,
+  updateEmergency,
+} from '../controllers/emergency.controller.js';
 
 const router = Router();
 
-router.post('/', createEmergencyRequest);
+router.get('/', getAllEmergencies);
+router.post('/', createEmergency);
+router.patch('/:id', updateEmergency);
 
 export default router;

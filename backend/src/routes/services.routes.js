@@ -1,19 +1,20 @@
 import { Router } from 'express';
 import {
-  getServices,
+  getAllServices,
   getServiceById,
-  submitServiceReport,
+  createService,
+  updateService,
+  getServiceImages,
   getNearestServices,
 } from '../controllers/services.controller.js';
-import { uploadServiceImage } from '../controllers/storage.controller.js';
-import { uploadSingleImage } from '../middleware/uploadMiddleware.js';
 
 const router = Router();
 
-router.get('/', getServices);
+router.get('/', getAllServices);
 router.get('/nearest', getNearestServices);
 router.get('/:id', getServiceById);
-router.post('/:serviceId/reports', submitServiceReport);
-router.post('/:serviceId/images', uploadSingleImage, uploadServiceImage);
+router.post('/', createService);
+router.patch('/:id', updateService);
+router.get('/:id/images', getServiceImages);
 
 export default router;
