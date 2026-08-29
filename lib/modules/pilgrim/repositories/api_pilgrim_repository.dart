@@ -197,13 +197,11 @@ class ApiPilgrimRepository implements PilgrimRepository {
         return list
             .map((item) => BhaktiMediaItem(
                   id: item['id'] ?? 'BHK-001',
+                  youtubeVideoId: item['youtubeVideoId'] ?? '',
                   title: item['title'] ?? '',
-                  marathiTitle: item['marathiTitle'] ?? '',
-                  artist: item['artist'] ?? '',
                   category: item['category'] ?? 'Abhang',
-                  duration: item['duration'] ?? '04:00',
-                  streamUrl: item['externalUrl'] ?? '',
                   thumbnailUrl: item['thumbnailUrl'] ?? '',
+                  channelTitle: item['channelTitle'] ?? '',
                 ))
             .toList();
       }
