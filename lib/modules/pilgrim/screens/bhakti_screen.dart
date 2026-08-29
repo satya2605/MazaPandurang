@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../common/constants/app_colors.dart';
 import '../models/pilgrim_models.dart';
 import '../repositories/pilgrim_repository.dart';
+import 'youtube_player_screen.dart';
 
 class BhaktiScreen extends StatefulWidget {
   final PilgrimRepository repository;
@@ -16,17 +17,16 @@ class BhaktiScreen extends StatefulWidget {
 }
 
 class _BhaktiScreenState extends State<BhaktiScreen> {
-  String _selectedCategory = 'Featured';
+  String _selectedCategory = 'Vitthal Bhajans';
   List<BhaktiMediaItem> _mediaItems = [];
-  BhaktiMediaItem? _currentlyPlaying;
   bool _isLoading = true;
 
   static const List<String> _categories = [
-    'Featured',
-    'Bhajans',
+    'Vitthal Bhajans',
     'Abhang',
-    'Kirtan',
-    'Videos',
+    'Wari Songs',
+    'Aarti',
+    'Pandurang',
   ];
 
   @override
@@ -92,106 +92,109 @@ class _BhaktiScreenState extends State<BhaktiScreen> {
           // Media Content List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _mediaItems.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = _mediaItems[index];
-                      final isPlayingThis = _currentlyPlaying?.id == item.id;
-
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withAlpha(30),
-                            child: Icon(
-                              item.category == 'Videos'
-                                  ? Icons.play_circle_fill
-                                  : Icons.music_note,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          title: Text(
-                            item.marathiTitle,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          subtitle: Text('${item.title} • ${item.artist}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(item.duration,
-                                  style: const TextStyle(fontSize: 12)),
-                              IconButton(
-                                icon: Icon(
-                                  isPlayingThis
-                                      ? Icons.pause_circle_filled
-                                      : Icons.play_circle_filled,
-                                  color: AppColors.primary,
-                                  size: 32,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _currentlyPlaying =
-                                        isPlayingThis ? null : item;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-
-          // Audio Streaming Player Bar
-          if (_currentlyPlaying != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: AppColors.primaryDark,
-              child: Row(
-                children: [
-                  const Icon(Icons.graphic_eq, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Expanded(
+                ? const Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          _currentlyPlaying!.marathiTitle,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          'Streaming: ${_currentlyPlaying!.artist}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Loading Bhakti content...'),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.stop, color: Colors.white),
-                    onPressed: () {
-                      setState(() {
-                        _currentlyPlaying = null;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
+                  )
+                : _mediaItems.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No approved Bhakti content available.',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _mediaItems.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final item = _mediaItems[index];
+                          return InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => YoutubePlayerScreen(
+                                    videoId: item.youtubeVideoId,
+                                    title: item.title,
+                                  ),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  // Thumbnail
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      item.thumbnailUrl,
+                                      width: 100,
+                                      height: 70,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          width: 100,
+                                          height: 70,
+                                          color: Colors.grey[300],
+                                          child: const Icon(Icons.music_note, color: Colors.grey),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.title,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item.channelTitle,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.play_circle_fill,
+                                    color: AppColors.primary,
+                                    size: 32,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
         ],
       ),
     );

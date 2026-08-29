@@ -65,8 +65,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       position: WariLatLng(18.3415, 74.0310),
       address: 'Near Saswad Bus Stand Ground',
       availabilityStatus: 'Open 24/7 (Available)',
-      description:
-          'First aid, emergency doctors, ambulances, and free medicines.',
+      description: 'First aid, emergency doctors, ambulances, and free medicines.',
       contactPhone: '+91 98765 43210',
       isVerified: true,
     ),
@@ -88,8 +87,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       position: WariLatLng(18.3400, 74.0330),
       address: 'Vitthal Mandir Premises',
       availabilityStatus: 'Serving Hot Food',
-      description:
-          'Free nutritious Sabudana Khichdi, Poori Bhaji, and Tea for all Warkaris.',
+      description: 'Free nutritious Sabudana Khichdi, Poori Bhaji, and Tea for all Warkaris.',
       contactPhone: '+91 94230 55667',
       isVerified: true,
     ),
@@ -100,8 +98,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       position: WariLatLng(18.3385, 74.0270),
       address: 'Saswad Bypass Road',
       availabilityStatus: 'Clean & Functional',
-      description:
-          '50 separate mobile toilets for men and women with washing area.',
+      description: '50 separate mobile toilets for men and women with washing area.',
       contactPhone: 'N/A',
       isVerified: true,
     ),
@@ -112,8 +109,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       position: WariLatLng(18.3450, 74.0340),
       address: 'Zilla Parishad School Ground',
       availabilityStatus: '80% Occupied',
-      description:
-          'Waterproof carpeted tents with mobile charging points and blankets.',
+      description: 'Waterproof carpeted tents with mobile charging points and blankets.',
       contactPhone: '+91 98900 88776',
       isVerified: true,
     ),
@@ -124,8 +120,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       position: WariLatLng(18.3410, 74.0300),
       address: 'Chhatrapati Shivaji Chowk',
       availabilityStatus: 'Active Helpdesk',
-      description:
-          'Route information, lost & found announcements, and security help.',
+      description: 'Route information, lost & found announcements, and security help.',
       contactPhone: '112 / +91 02115 222100',
       isVerified: true,
     ),
@@ -136,8 +131,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       position: WariLatLng(18.3435, 74.0325),
       address: 'Opposite Government Hospital',
       availabilityStatus: 'Volunteers Active',
-      description:
-          'Free herbal foot massage, pain relief sprays, and bandage distribution.',
+      description: 'Free herbal foot massage, pain relief sprays, and bandage distribution.',
       contactPhone: '+91 97654 32109',
       isVerified: true,
     ),
@@ -145,54 +139,204 @@ class MockPilgrimRepository implements PilgrimRepository {
 
   static final List<BhaktiMediaItem> sampleBhaktiContent = [
     const BhaktiMediaItem(
-      id: 'BHK-001',
-      title: 'Majha Pandurang Abhang Gatha',
-      marathiTitle: 'माझा पांडुरंग अभंग गाथा',
-      artist: 'Pandit Bhimsen Joshi',
+      id: 'YTB-sHVUlXAvCd0',
+      youtubeVideoId: 'sHVUlXAvCd0',
+      category: 'Vitthal Bhajans',
+      title: '''Deh Vitthal (Song) | देह विठ्ठल | Avadhoot Gandhi, Prasad Prabhakar Shinde | WARI - वारी 2024''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/sHVUlXAvCd0/hqdefault.jpg',
+      channelTitle: '''Panorama Music Marathi''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-wgCPZtfj3lY',
+      youtubeVideoId: 'wgCPZtfj3lY',
+      category: 'Vitthal Bhajans',
+      title: '''🌺श्री विठ्ठलाचे अप्रतिम भजन🚩पांडुरंगाचे मनमोहक भजन#स्वरसाई #vitthalbhajanmarathi #विठ्ठलभजन #bhajan''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/wgCPZtfj3lY/hqdefault.jpg',
+      channelTitle: '''स्वर साई''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-c25qRXGcuXM',
+      youtubeVideoId: 'c25qRXGcuXM',
+      category: 'Vitthal Bhajans',
+      title: '''Top 15 सकाळचे भक्ती गीते विठ्ठल भक्तिगीते | Vitthal Bhaktigeete |  Vitthal Song Marathi''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/c25qRXGcuXM/hqdefault_live.jpg',
+      channelTitle: '''Wings Ganesh Bhakti''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-sqrew1ABIC4',
+      youtubeVideoId: 'sqrew1ABIC4',
+      category: 'Vitthal Bhajans',
+      title: '''Bolava Vitthal Pahava Vitthal बोलावा विठ्ठल पहावा विठ्ठल मराठी अभंग | भजन | Ketakee Mateygaonkar''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/sqrew1ABIC4/hqdefault.jpg',
+      channelTitle: '''Ketakee Mateygaonkar''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-yltBOtKSG1Y',
+      youtubeVideoId: 'yltBOtKSG1Y',
+      category: 'Vitthal Bhajans',
+      title: '''Top 12 Pralhad Shinde Special विठ्ठलाची भक्तिगीते | Pralhad Shinde Vitthal Song | मागतो मी पांडुरंगा''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/yltBOtKSG1Y/hqdefault.jpg',
+      channelTitle: '''Wings Marathi Bhakti''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-_Y8NyXUSzDI',
+      youtubeVideoId: '_Y8NyXUSzDI',
       category: 'Abhang',
-      duration: '14:20',
-      thumbnailUrl: 'https://example.com/thumb1.jpg',
-      streamUrl: 'https://example.com/audio1.mp3',
+      title: '''विठ्ठल पाहूणा आला माझ्या घरा  Vitthal Pahuna Aala Majhya Ghara | Sant Tukaram Maharaj Vitthal Abhang''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/_Y8NyXUSzDI/hqdefault.jpg',
+      channelTitle: '''Vision Bhakti Marathi''',
     ),
     const BhaktiMediaItem(
-      id: 'BHK-002',
-      title: 'Alandi Te Pandharpur Wari Songs',
-      marathiTitle: 'आळंदी ते पंढरपूर वारी गीते',
-      artist: 'Ajit Kadkade',
-      category: 'Featured',
-      duration: '22:15',
-      thumbnailUrl: 'https://example.com/thumb2.jpg',
-      streamUrl: 'https://example.com/audio2.mp3',
+      id: 'YTB-qxpucRQFgGc',
+      youtubeVideoId: 'qxpucRQFgGc',
+      category: 'Abhang',
+      title: '''संत मुक्ताबाई अभंग : आकाशीचा चंद्र शोभे माझ्या अंगणात | Aakashicha Chandra Shobhe | Vitthal Abhang''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/qxpucRQFgGc/hqdefault.jpg',
+      channelTitle: '''Vitthal Bhakti - अभंग विठ्ठलाचे''',
     ),
     const BhaktiMediaItem(
-      id: 'BHK-003',
-      title: 'Dnyaneshwar Maharaj Haripath',
-      marathiTitle: 'ज्ञानेश्वर महाराज हरिपाठ',
-      artist: 'Prahlad Shinde',
-      category: 'Kirtan',
-      duration: '35:40',
-      thumbnailUrl: 'https://example.com/thumb3.jpg',
-      streamUrl: 'https://example.com/audio3.mp3',
+      id: 'YTB-hfwfL6MFLCo',
+      youtubeVideoId: 'hfwfL6MFLCo',
+      category: 'Abhang',
+      title: '''प्रचंड गाजलेले अभंग | विठ्ठलाची गाणी | विठ्ठलाची भक्तीगीते | Vitthal Abhang | Vitthal Songs Marathi''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/hfwfL6MFLCo/hqdefault.jpg',
+      channelTitle: '''Vitthal Bhakti - अभंग विठ्ठलाचे''',
     ),
     const BhaktiMediaItem(
-      id: 'BHK-004',
-      title: 'Gyanoba Mauli Tukaram Chants',
-      marathiTitle: 'ज्ञानोबा माऊली तुकाराम नामजप',
-      artist: 'Warkari Bhajan Vrinda',
-      category: 'Bhajans',
-      duration: '18:50',
-      thumbnailUrl: 'https://example.com/thumb4.jpg',
-      streamUrl: 'https://example.com/audio4.mp3',
+      id: 'YTB-sHVUlXAvCd0',
+      youtubeVideoId: 'sHVUlXAvCd0',
+      category: 'Abhang',
+      title: '''Deh Vitthal (Song) | देह विठ्ठल | Avadhoot Gandhi, Prasad Prabhakar Shinde | WARI - वारी 2024''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/sHVUlXAvCd0/hqdefault.jpg',
+      channelTitle: '''Panorama Music Marathi''',
     ),
     const BhaktiMediaItem(
-      id: 'BHK-005',
-      title: 'Ringan Ceremony Highlights Video',
-      marathiTitle: 'रिंगण सोहळा व्हिडिओ',
-      artist: 'Wari Live Broadcast',
-      category: 'Videos',
-      duration: '08:45',
-      thumbnailUrl: 'https://example.com/thumb5.jpg',
-      streamUrl: 'https://example.com/video1.mp4',
+      id: 'YTB-sqrew1ABIC4',
+      youtubeVideoId: 'sqrew1ABIC4',
+      category: 'Abhang',
+      title: '''Bolava Vitthal Pahava Vitthal बोलावा विठ्ठल पहावा विठ्ठल मराठी अभंग | भजन | Ketakee Mateygaonkar''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/sqrew1ABIC4/hqdefault.jpg',
+      channelTitle: '''Ketakee Mateygaonkar''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-p0_AiK8Xxj0',
+      youtubeVideoId: 'p0_AiK8Xxj0',
+      category: 'Wari Songs',
+      title: '''Pandharichi Wari (पंढरीची वारी जयाचिये कुळीं )''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/p0_AiK8Xxj0/hqdefault.jpg',
+      channelTitle: '''amitpune1''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-sHVUlXAvCd0',
+      youtubeVideoId: 'sHVUlXAvCd0',
+      category: 'Wari Songs',
+      title: '''Deh Vitthal (Song) | देह विठ्ठल | Avadhoot Gandhi, Prasad Prabhakar Shinde | WARI - वारी 2024''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/sHVUlXAvCd0/hqdefault.jpg',
+      channelTitle: '''Panorama Music Marathi''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-iMKoY1xJD2U',
+      youtubeVideoId: 'iMKoY1xJD2U',
+      category: 'Wari Songs',
+      title: '''Bhakta Pundalika Saathi Ubha Rahila Vithevari - Shri Vitthal Bhakti Geet - Sumeet Music''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/iMKoY1xJD2U/hqdefault.jpg',
+      channelTitle: '''Sumeet Music''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-5BTqInkHiI4',
+      youtubeVideoId: '5BTqInkHiI4',
+      category: 'Wari Songs',
+      title: '''Pandharpurat Kay Vajat Gajat - Vitthal Songs Marathi विठ्ठलाची गाणी | Sonyach Bashing Lagin Devach''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/5BTqInkHiI4/hqdefault.jpg',
+      channelTitle: '''Nova Marathi Bhakti''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB--ovKz1RtjBo',
+      youtubeVideoId: '-ovKz1RtjBo',
+      category: 'Wari Songs',
+      title: '''Dharila Pandharicha Chor Anuradha Paudwal Superhit Song | धरिला पंढरीचा चोर | Pandharichi Vari |''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/-ovKz1RtjBo/hqdefault.jpg',
+      channelTitle: '''Rajshree Marathibana''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-0vGoZrDKtsg',
+      youtubeVideoId: '0vGoZrDKtsg',
+      category: 'Aarti',
+      title: '''Vitthal Aarti | विठ्ठलाची आरती | Kanadau Vitthalu | Sagarika Bhakati''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/0vGoZrDKtsg/hqdefault.jpg',
+      channelTitle: '''Sagarika Devotional''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-tgvr9u6mvs0',
+      youtubeVideoId: 'tgvr9u6mvs0',
+      category: 'Aarti',
+      title: '''Yuge Atthavis - Vitthal Aarti BY Anuradha Paudwal - Marathi Aarti | आषाढ़ी एकादशी''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/tgvr9u6mvs0/hqdefault.jpg',
+      channelTitle: '''T-Series Bhakti Marathi''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-8O7FU5KD5bE',
+      youtubeVideoId: '8O7FU5KD5bE',
+      category: 'Aarti',
+      title: '''Yei O Vitthale Maze Mauli Ye | Vitthal Aarti | Marathi Devotional Song | Ashadhi Ekadashi Special''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/8O7FU5KD5bE/hqdefault.jpg',
+      channelTitle: '''Rajshri Soul''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-rahKfNNp2FI',
+      youtubeVideoId: 'rahKfNNp2FI',
+      category: 'Aarti',
+      title: '''Yuge Atthavis Vitthala Aarti | Ashadhi Ekadashi Special | | युगे अठ्ठावीस आरती | Rajshri Soul''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/rahKfNNp2FI/hqdefault.jpg',
+      channelTitle: '''Rajshri Soul''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-IZalBEAg5Ng',
+      youtubeVideoId: 'IZalBEAg5Ng',
+      category: 'Aarti',
+      title: '''श्री विठ्ठलाची आरती | विठ्ठल रखुमाई आरती | संपूर्ण आरती | आषाढी एकादशी विशेष | Vitthal Aarti''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/IZalBEAg5Ng/hqdefault.jpg',
+      channelTitle: '''DivineEchoVibrations by SaRanga''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-WZFiFlaHnAI',
+      youtubeVideoId: 'WZFiFlaHnAI',
+      category: 'Pandurang',
+      title: '''विठ्ठल भक्तीगीते | विठू माऊली तू माऊली जगाची : Vithu Mauli Tu Mauli Jagachi | Vitthal Songs Marathi''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/WZFiFlaHnAI/hqdefault.jpg',
+      channelTitle: '''माझी मराठी गाणी''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-EpWxm_eXdE0',
+      youtubeVideoId: 'EpWxm_eXdE0',
+      category: 'Pandurang',
+      title: '''Dhavuni Ye Vitthala Satwari - Shree Vitthal Bhaktigeet Vithalachi Gani- Sumeet Music''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/EpWxm_eXdE0/hqdefault.jpg',
+      channelTitle: '''Sumeet Music''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-_Y8NyXUSzDI',
+      youtubeVideoId: '_Y8NyXUSzDI',
+      category: 'Pandurang',
+      title: '''विठ्ठल पाहूणा आला माझ्या घरा  Vitthal Pahuna Aala Majhya Ghara | Sant Tukaram Maharaj Vitthal Abhang''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/_Y8NyXUSzDI/hqdefault.jpg',
+      channelTitle: '''Vision Bhakti Marathi''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-uj2QKZ7uj94',
+      youtubeVideoId: 'uj2QKZ7uj94',
+      category: 'Pandurang',
+      title: '''भक्त पुंडलिकासाठी#विठ्ठल भजन# पांडुरंग भजन#हरी भजन# Vitthal bhajan#Pandurang bhajan#''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/uj2QKZ7uj94/hqdefault.jpg',
+      channelTitle: '''आपली आदर्श आई''',
+    ),
+    const BhaktiMediaItem(
+      id: 'YTB-sqrew1ABIC4',
+      youtubeVideoId: 'sqrew1ABIC4',
+      category: 'Pandurang',
+      title: '''Bolava Vitthal Pahava Vitthal बोलावा विठ्ठल पहावा विठ्ठल मराठी अभंग | भजन | Ketakee Mateygaonkar''',
+      thumbnailUrl: 'https://i.ytimg.com/vi/sqrew1ABIC4/hqdefault.jpg',
+      channelTitle: '''Ketakee Mateygaonkar''',
     ),
   ];
 
@@ -247,32 +391,27 @@ class MockPilgrimRepository implements PilgrimRepository {
     if (lower.contains('palkhi') ||
         lower.contains('location') ||
         lower.contains('स्थान')) {
-      answer =
-          'Sant Dnyaneshwar Maharaj Palkhi is currently at Saswad (सासवड मुक्काम). The next stop is Jejuri.';
+      answer = 'Sant Dnyaneshwar Maharaj Palkhi is currently at Saswad (सासवड मुक्काम). The next stop is Jejuri.';
       targetRoute = '/palkhi';
       actionText = 'View Palkhi Route';
     } else if (lower.contains('medical') ||
         lower.contains('doctor') ||
         lower.contains('औषध')) {
-      answer =
-          'The nearest medical facility is Saswad Central Medical Camp (SRV-MED-001) near Saswad Bus Stand. Open 24/7.';
+      answer = 'The nearest medical facility is Saswad Central Medical Camp (SRV-MED-001) near Saswad Bus Stand. Open 24/7.';
       targetRoute = '/services';
       actionText = 'Show Medical Camps';
     } else if (lower.contains('dindi') || lower.contains('दिंडी')) {
-      answer =
-          'You are currently near Dindi No. 1 (Mauli Prasann) and Dindi No. 12 (Gyanoba Tukaram).';
+      answer = 'You are currently near Dindi No. 1 (Mauli Prasann) and Dindi No. 12 (Gyanoba Tukaram).';
       targetRoute = '/dindi';
       actionText = 'View Nearby Dindis';
     } else if (lower.contains('water') ||
         lower.contains('पानी') ||
         lower.contains('जल')) {
-      answer =
-          'Clean Jal Seva Tank 1 (SRV-WTR-002) is located at the Dive Ghat Exit Point.';
+      answer = 'Clean Jal Seva Tank 1 (SRV-WTR-002) is located at the Dive Ghat Exit Point.';
       targetRoute = '/services';
       actionText = 'Locate Water Points';
     } else {
-      answer =
-          'Jay Jay Ram Krishna Hari! I am Tilak, your Wari AI guide. How can I help you navigate services, Palkhi locations, or emergency assistance today?';
+      answer = 'Jay Jay Ram Krishna Hari! I am Tilak, your Wari AI guide. How can I help you navigate services, Palkhi locations, or emergency assistance today?';
     }
 
     return TilakChatMessage(

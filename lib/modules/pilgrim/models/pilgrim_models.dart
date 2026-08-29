@@ -161,25 +161,31 @@ class WariService {
 /// Bhakti devotional media item metadata.
 class BhaktiMediaItem {
   final String id;
+  final String youtubeVideoId;
+  final String category;
   final String title;
-  final String marathiTitle;
-  final String artist;
-  final String
-      category; // e.g. "Featured", "Bhajans", "Abhang", "Kirtan", "Videos"
-  final String duration;
   final String thumbnailUrl;
-  final String streamUrl;
+  final String channelTitle;
 
   const BhaktiMediaItem({
     required this.id,
-    required this.title,
-    required this.marathiTitle,
-    required this.artist,
+    required this.youtubeVideoId,
     required this.category,
-    required this.duration,
+    required this.title,
     required this.thumbnailUrl,
-    required this.streamUrl,
+    required this.channelTitle,
   });
+
+  factory BhaktiMediaItem.fromJson(Map<String, dynamic> json) {
+    return BhaktiMediaItem(
+      id: json['id'] ?? '',
+      youtubeVideoId: json['youtubeVideoId'] ?? '',
+      category: json['category'] ?? '',
+      title: json['title'] ?? '',
+      thumbnailUrl: json['thumbnailUrl'] ?? '',
+      channelTitle: json['channelTitle'] ?? '',
+    );
+  }
 }
 
 /// Tilak AI Chat message.
