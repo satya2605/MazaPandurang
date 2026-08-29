@@ -19,9 +19,9 @@ export async function authenticateJwt(req, res, next) {
         });
       }
       userId = authData.user.id;
-    } else if (process.env.NODE_ENV === 'test' || req.headers['x-admin-id'] || req.headers['x-user-id']) {
-      // Dev & test harness fallback
-      userId = req.headers['x-admin-id'] || req.headers['x-user-id'] || '00000000-0000-0000-0000-000000000006';
+    } else if (req.headers['x-admin-id'] || req.headers['x-user-id']) {
+      // Dev & test harness fallback when explicit header provided
+      userId = req.headers['x-admin-id'] || req.headers['x-user-id'];
     } else {
       return res.status(401).json({
         error: {

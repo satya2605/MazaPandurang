@@ -3,9 +3,14 @@ import { getSupabaseClient } from '../db/supabase.js';
 export async function getAllDindis(req, res, next) {
   try {
     const client = getSupabaseClient();
-    const { data, error } = await client
-      .from('dindis')
-      .select('*, profiles:leader_id(display_name, phone)');
+    let query = client.from('dindis').select('*, profiles:leader_id(display_name, phone)');
+
+    // Public endpoint excludes pending/rejected/suspended dindis unless caller is admin
+    if (!req.user || req.user.role !== 'admin') {
+      query = query.eq('status', 'Active');
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -112,7 +117,7 @@ export async function createDindi(req, res, next) {
       current_location_name: current_location_name || 'Alandi',
       latitude: latitude || 18.6772,
       longitude: longitude || 73.8967,
-      status: 'Active',
+      status: 'Pending',
       start_point: start_point || 'Alandi',
       destination: destination || 'Pandharpur',
       current_halt: current_halt || '',
@@ -139,6 +144,21 @@ export async function updateDindi(req, res, next) {
     const body = req.body;
     const client = getSupabaseClient();
 
+    // Fetch existing Dindi to verify ownership
+    const { data: existing, error: fetchErr } = await client
+      .from('dindis')
+      .select('*')
+      .or(`id.eq.${id},dindi_number.eq.${id}`)
+      .single();
+
+    if (fetchErr || !existing) {
+      return res.status(404).json({ error: 'Dindi not found' });
+    }
+
+    if (req.user && req.user.role !== 'admin' && existing.leader_id !== req.user.id) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You are not authorized to modify another leader\'s Dindi.' } });
+    }
+
     const updates = {
       updated_at: new Date().toISOString(),
     };
@@ -147,7 +167,7 @@ export async function updateDindi(req, res, next) {
     if (body.current_location_name !== undefined) updates.current_location_name = body.current_location_name;
     if (body.latitude !== undefined) updates.latitude = body.latitude;
     if (body.longitude !== undefined) updates.longitude = body.longitude;
-    if (body.status !== undefined) updates.status = body.status;
+    if (body.status !== undefined && req.user?.role === 'admin') updates.status = body.status;
     if (body.start_point !== undefined) updates.start_point = body.start_point;
     if (body.destination !== undefined) updates.destination = body.destination;
     if (body.current_halt !== undefined) updates.current_halt = body.current_halt;

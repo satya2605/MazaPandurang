@@ -44,10 +44,16 @@ Admin functions as the **verification, moderation, approval, publication, and ac
 - `PATCH /api/admin/services/:id/publish` — Publish facility (`is_active = true`)
 - `PATCH /api/admin/services/:id/unpublish` — Unpublish facility (`is_active = false`)
 
-### Dindi Moderation
+### Dindi & Dindi Leader Moderation
 - `GET /api/admin/dindis` — Query Dindis (`?status=Active|Pending|Suspended`)
 - `PATCH /api/admin/dindis/:id/approve` — Approve Dindi (`status = 'Active'`)
+- `PATCH /api/admin/dindis/:id/reject` — Reject Dindi (`status = 'Rejected'`)
 - `PATCH /api/admin/dindis/:id/suspend` — Suspend Dindi (`status = 'Suspended'`)
+- `GET /api/admin/dindi-leaders` — Query Dindi Leader applications (`?status=pending|active|rejected|suspended`)
+- `GET /api/admin/dindi-leaders/:id` — Inspect Dindi Leader application details
+- `PATCH /api/admin/dindi-leaders/:id/approve` — Approve Dindi Leader application (`profiles.status = 'active'`)
+- `PATCH /api/admin/dindi-leaders/:id/reject` — Reject Dindi Leader application (`profiles.status = 'rejected'`)
+- `PATCH /api/admin/dindi-leaders/:id/suspend` — Suspend Dindi Leader application (`profiles.status = 'suspended'`)
 
 ### Lost Person Moderation
 - `GET /api/admin/lost-persons` — Query missing person cases (`?status=pending|approved`)
