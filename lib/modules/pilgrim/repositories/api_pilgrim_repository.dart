@@ -348,23 +348,67 @@ class ApiPilgrimRepository implements PilgrimRepository {
   @override
   Future<bool> reportEmergency({required String emergencyType, required double latitude, required double longitude, String? description}) async {
     try {
+      final req = await createEmergencyRequest(
+        emergencyType: emergencyType,
+        latitude: latitude,
+        longitude: longitude,
+        description: description,
+      );
+      return req.id.isNotEmpty;
+    } catch (_) {
+      return await _fallback.reportEmergency(emergencyType: emergencyType, latitude: latitude, longitude: longitude, description: description);
+    }
+  }
+
+  @override
+  Future<EmergencyRequest> createEmergencyRequest({
+    required String emergencyType,
+    required double latitude,
+    required double longitude,
+    String? locationName,
+    String? description,
+  }) async {
+    try {
       final response = await _apiClient.post(
         '/emergencies',
         body: {
           'emergency_type': emergencyType,
           'latitude': latitude,
           'longitude': longitude,
+          'location_name': locationName ?? '',
           'description': description ?? '',
         },
       ).timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        final emgData = body['emergency'] ?? body;
+        return EmergencyRequest.fromJson(emgData as Map<String, dynamic>);
       }
     } catch (e) {
-      debugPrint('[MOCK] /api/emergencies fallback: $e');
+      debugPrint('[MOCK] POST /api/emergencies fallback: $e');
     }
-    return await _fallback.reportEmergency(emergencyType: emergencyType, latitude: latitude, longitude: longitude, description: description);
+    return await _fallback.createEmergencyRequest(
+      emergencyType: emergencyType,
+      latitude: latitude,
+      longitude: longitude,
+      locationName: locationName,
+      description: description,
+    );
+  }
+
+  @override
+  Future<List<EmergencyRequest>> getEmergencyRequests() async {
+    try {
+      final response = await _apiClient.get('/emergencies').timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body);
+        return list.map((item) => EmergencyRequest.fromJson(item as Map<String, dynamic>)).toList();
+      }
+    } catch (e) {
+      debugPrint('[MOCK] GET /api/emergencies fallback: $e');
+    }
+    return await _fallback.getEmergencyRequests();
   }
 
   @override

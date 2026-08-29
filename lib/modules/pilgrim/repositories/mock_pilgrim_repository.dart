@@ -396,6 +396,48 @@ class MockPilgrimRepository implements PilgrimRepository {
     return true;
   }
 
+  final List<EmergencyRequest> _mockEmergencies = [
+    EmergencyRequest(
+      id: 'EMG-001',
+      requestCode: 'EMG-1001',
+      requesterId: '00000000-0000-0000-0000-000000000001',
+      emergencyType: 'Medical',
+      position: const WariLatLng(18.3411, 74.0305),
+      locationName: 'Saswad Medical Desk',
+      description: 'Dehydration & heat stroke assistance',
+      status: 'pending',
+      createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
+    ),
+  ];
+
+  @override
+  Future<EmergencyRequest> createEmergencyRequest({
+    required String emergencyType,
+    required double latitude,
+    required double longitude,
+    String? locationName,
+    String? description,
+  }) async {
+    final req = EmergencyRequest(
+      id: 'EMG-${DateTime.now().millisecondsSinceEpoch}',
+      requestCode: 'EMG-${DateTime.now().millisecondsSinceEpoch}',
+      requesterId: '00000000-0000-0000-0000-000000000001',
+      emergencyType: emergencyType,
+      position: WariLatLng(latitude, longitude),
+      locationName: locationName ?? 'Wari Location',
+      description: description ?? '',
+      status: 'pending',
+      createdAt: DateTime.now(),
+    );
+    _mockEmergencies.insert(0, req);
+    return req;
+  }
+
+  @override
+  Future<List<EmergencyRequest>> getEmergencyRequests() async {
+    return List.unmodifiable(_mockEmergencies);
+  }
+
   @override
   Future<TilakChatMessage> queryTilakAI(String prompt) async {
     final lower = prompt.toLowerCase();

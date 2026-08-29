@@ -124,7 +124,7 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
               setState(() => _currentNavIndex = 1);
             } else if (route == '/services') {
               setState(() => _currentNavIndex = 2);
-            } else if (route == '/help') {
+            } else if (route == '/help' || route == '/emergency' || route == '/sos') {
               setState(() => _currentNavIndex = 5);
             }
           },
@@ -142,7 +142,7 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
       case 4:
         return BhaktiScreen(repository: _repository);
       case 5:
-        return const HelpScreen();
+        return HelpScreen(repository: _repository);
       case 0:
       default:
         return PilgrimMapWidget(

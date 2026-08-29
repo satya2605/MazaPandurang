@@ -19,6 +19,8 @@ abstract class PilgrimRepository {
   Future<bool> reportLostPersonSighting(String lostPersonId, {required double latitude, required double longitude, required String locationName, String? details});
   Future<List<LostPersonSighting>> getLostPersonSightings(String lostPersonId);
   Future<bool> reportEmergency({required String emergencyType, required double latitude, required double longitude, String? description});
+  Future<EmergencyRequest> createEmergencyRequest({required String emergencyType, required double latitude, required double longitude, String? locationName, String? description});
+  Future<List<EmergencyRequest>> getEmergencyRequests();
   Future<List<TrafficAlert>> getTrafficAlerts();
   Future<TilakChatMessage> queryTilakAI(String prompt);
 }

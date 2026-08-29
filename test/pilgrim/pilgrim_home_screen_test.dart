@@ -84,8 +84,8 @@ void main() {
       await tester.tap(find.text('Help'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Emergency & Help (मदत व आपत्कालीन)'), findsOneWidget);
-      expect(find.text('Emergency Medical Assistance'), findsOneWidget);
+      expect(find.text('Emergency & Safety (आपत्कालीन सेवा)'), findsOneWidget);
+      expect(find.text('Select Emergency Assistance Type'), findsOneWidget);
     });
 
     testWidgets('Tapping Tilak AI opens Tilak AI modal assistant',

@@ -541,3 +541,48 @@ class TrafficAlert {
     );
   }
 }
+
+/// Emergency Request object returned by POST/GET /api/emergencies.
+class EmergencyRequest {
+  final String id;
+  final String requestCode;
+  final String requesterId;
+  final String emergencyType; // Medical, Police, Lost Person, Other
+  final WariLatLng position;
+  final String locationName;
+  final String description;
+  final String status; // pending, dispatched, resolved, cancelled
+  final DateTime createdAt;
+  final DateTime? resolvedAt;
+
+  const EmergencyRequest({
+    required this.id,
+    required this.requestCode,
+    required this.requesterId,
+    required this.emergencyType,
+    required this.position,
+    required this.locationName,
+    required this.description,
+    required this.status,
+    required this.createdAt,
+    this.resolvedAt,
+  });
+
+  factory EmergencyRequest.fromJson(Map<String, dynamic> json) {
+    return EmergencyRequest(
+      id: json['id']?.toString() ?? '',
+      requestCode: json['request_code']?.toString() ?? json['requestCode']?.toString() ?? 'EMG-000',
+      requesterId: json['requester_id']?.toString() ?? json['requesterId']?.toString() ?? '',
+      emergencyType: json['emergency_type']?.toString() ?? json['emergencyType']?.toString() ?? 'Medical',
+      position: WariLatLng(
+        (json['latitude'] as num?)?.toDouble() ?? 18.3411,
+        (json['longitude'] as num?)?.toDouble() ?? 74.0305,
+      ),
+      locationName: json['location_name']?.toString() ?? json['locationName']?.toString() ?? 'Wari Location',
+      description: json['description']?.toString() ?? '',
+      status: (json['status']?.toString() ?? 'pending').toLowerCase(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      resolvedAt: json['resolved_at'] != null ? DateTime.tryParse(json['resolved_at'].toString()) : null,
+    );
+  }
+}

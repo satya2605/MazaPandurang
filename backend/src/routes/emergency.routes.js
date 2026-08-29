@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticateJwt, requireRole } from '../middleware/auth.js';
 import {
   getAllEmergencies,
   createEmergency,
@@ -7,8 +8,8 @@ import {
 
 const router = Router();
 
-router.get('/', getAllEmergencies);
-router.post('/', createEmergency);
-router.patch('/:id', updateEmergency);
+router.get('/', authenticateJwt, getAllEmergencies);
+router.post('/', authenticateJwt, createEmergency);
+router.patch('/:id', authenticateJwt, requireRole(['police_authority', 'admin']), updateEmergency);
 
 export default router;

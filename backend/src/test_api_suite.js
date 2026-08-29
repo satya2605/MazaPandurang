@@ -171,7 +171,51 @@ async function runTestSuite() {
     if (emptyTilak.status !== 400) throw new Error(`Expected 400 for empty message, got ${emptyTilak.status}`);
     console.log('[PASS 28] POST /api/ai/tilak/chat empty message -> Status 400');
 
-    console.log('\n🎉 ALL 28 MASTER PLATFORM & TILAK AI API TESTS PASSED CLEANLY!\n');
+    // 29. Emergency creation unauthenticated -> 401
+    const unauthEmg = await request('/api/emergencies', {
+      method: 'POST',
+      body: { emergency_type: 'Medical', latitude: 18.3411, longitude: 74.0305 }
+    });
+    if (unauthEmg.status !== 401) throw new Error(`Expected 401 for unauthenticated emergency creation, got ${unauthEmg.status}`);
+    console.log('[PASS 29] POST /api/emergencies unauthenticated -> Status 401');
+
+    // 30. Emergency creation authenticated (Satyajit Pilgrim) -> 201
+    const authEmg = await request('/api/emergencies', {
+      method: 'POST',
+      headers: pilgrimHeaders,
+      body: { emergency_type: 'Medical', latitude: 18.3411, longitude: 74.0305, location_name: 'Saswad Medical Desk' }
+    });
+    if (authEmg.status !== 201 || !authEmg.json.requestCode) throw new Error(`Expected 201 for emergency creation, got ${authEmg.status}`);
+    const createdCode = authEmg.json.requestCode;
+    console.log(`[PASS 30] POST /api/emergencies authenticated -> Status 201 (Request Code: ${createdCode})`);
+
+    // 31. Pilgrim querying /api/emergencies -> 200 (Scope Isolated)
+    const pilgrimEmgList = await request('/api/emergencies', {
+      method: 'GET',
+      headers: pilgrimHeaders
+    });
+    if (pilgrimEmgList.status !== 200 || !Array.isArray(pilgrimEmgList.json)) throw new Error(`Expected 200 for pilgrim emergency list`);
+    console.log(`[PASS 31] GET /api/emergencies (Pilgrim Scope Isolated) -> Status 200 (${pilgrimEmgList.json.length} requests)`);
+
+    // 32. Pilgrim attempting to patch emergency status -> 403 Forbidden
+    const pilgrimPatchEmg = await request(`/api/emergencies/${createdCode}`, {
+      method: 'PATCH',
+      headers: pilgrimHeaders,
+      body: { status: 'resolved' }
+    });
+    if (pilgrimPatchEmg.status !== 403) throw new Error(`Expected 403 for pilgrim modifying emergency, got ${pilgrimPatchEmg.status}`);
+    console.log('[PASS 32] Security: Pilgrim modifying emergency status rejected -> Status 403');
+
+    // 33. Admin/Police managing emergency status -> 200
+    const adminPatchEmg = await request(`/api/emergencies/${createdCode}`, {
+      method: 'PATCH',
+      headers: adminHeaders,
+      body: { status: 'dispatched' }
+    });
+    if (adminPatchEmg.status !== 200 || adminPatchEmg.json.status !== 'dispatched') throw new Error(`Expected 200 for Admin/Police emergency status dispatch, got ${adminPatchEmg.status}`);
+    console.log('[PASS 33] PATCH /api/emergencies/:id (Admin/Police Authorized) -> Status 200 (Status: dispatched)');
+
+    console.log('\n🎉 ALL 33 MASTER PLATFORM & EMERGENCY API TESTS PASSED CLEANLY!\n');
   } catch (err) {
     console.error('❌ Test suite failed:', err);
     process.exitCode = 1;

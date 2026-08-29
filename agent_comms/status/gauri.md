@@ -13,4 +13,7 @@
 - **Working On**: City Guide & Traffic Advisory Flow
 - **Blocked**: No
 - **Needs Communication**: No
-- **Last Updated**: 2026-08-29 10:54:00 IST
+- **Last Updated**: 2026-08-29 22:27:00 IST
+
+## Platform Coordination Notice (DEC-2026-08-29-011)
+- **Emergency & Lost Person Integration**: Missing person reports continue using the canonical `/api/lost-persons` workflow. No parallel lost-person database created.
