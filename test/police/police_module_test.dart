@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maza_pandurang/modules/police/police_module.dart';
 
 void main() {
-  testWidgets('PoliceModule screen renders PoliceInitializerScreen',
+  testWidgets('PoliceModule.screen renders PoliceLoginScreen',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -11,7 +11,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Police / Authority Module'), findsWidgets);
-    expect(find.text('Module initialized successfully.'), findsOneWidget);
+    expect(find.text('Police Command'), findsOneWidget);
+    expect(find.text('माझा पांडुरंग — Authority Portal'), findsOneWidget);
   });
 }
