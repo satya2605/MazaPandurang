@@ -10,8 +10,11 @@ export async function getApplicationRoutes(req, res, next) {
       query = query.eq('type', type);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    let { data, error } = await query;
+    if (error) {
+      const { data: wariData } = await client.from('wari_route').select('*');
+      data = wariData || [];
+    }
     res.json(data || []);
   } catch (err) {
     next(err);
