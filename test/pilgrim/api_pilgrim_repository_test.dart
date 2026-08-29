@@ -40,8 +40,7 @@ void main() {
       expect(stage.position.latitude, equals(18.2764));
     });
 
-    test('MockPilgrimRepository implements getWariRoute returning 8 stages',
-        () async {
+    test('MockPilgrimRepository implements getWariRoute returning 8 stages', () async {
       final mockRepo = MockPilgrimRepository();
       final stages = await mockRepo.getWariRoute();
 
@@ -50,19 +49,33 @@ void main() {
       expect(stages.last.stageName, contains('Pandharpur'));
     });
 
-    test('ApiPilgrimRepository falls back cleanly when backend is unreachable',
-        () async {
-      final apiRepo = ApiPilgrimRepository(baseUrl: 'http://localhost:9999');
+    test('ApiPilgrimRepository falls back cleanly when backend is unreachable', () async {
+      final apiRepo = ApiPilgrimRepository();
 
       final palkhi = await apiRepo.getPalkhiInfo();
       final dindis = await apiRepo.getNearbyDindis();
       final services = await apiRepo.getServices();
       final routeStages = await apiRepo.getWariRoute();
+      final cityPlaces = await apiRepo.getCityPlaces();
+      final cityRoutes = await apiRepo.getCityRoutes();
+      final donations = await apiRepo.getDonationsInfo();
+      final lostPersons = await apiRepo.getLostPersons();
+      final emergencyResult = await apiRepo.reportEmergency(
+        emergencyType: 'Medical SOS',
+        latitude: 18.3411,
+        longitude: 74.0305,
+        description: 'Test emergency report',
+      );
 
       expect(palkhi.name, contains('Sant Dnyaneshwar Maharaj Palkhi'));
       expect(dindis.isNotEmpty, isTrue);
       expect(services.isNotEmpty, isTrue);
       expect(routeStages.length, equals(8));
+      expect(cityPlaces.isNotEmpty, isTrue);
+      expect(cityRoutes.isNotEmpty, isTrue);
+      expect(donations, isNotNull);
+      expect(lostPersons.isNotEmpty, isTrue);
+      expect(emergencyResult, isTrue);
     });
   });
 }

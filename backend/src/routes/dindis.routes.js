@@ -8,13 +8,15 @@ import {
   joinDindi,
 } from '../controllers/dindis.controller.js';
 
+import { authenticateJwt } from '../middleware/auth.js';
+
 const router = Router();
 
 router.get('/', getAllDindis);
 router.get('/:id', getDindiById);
-router.post('/', createDindi);
-router.patch('/:id', updateDindi);
+router.post('/', authenticateJwt, createDindi);
+router.patch('/:id', authenticateJwt, updateDindi);
 router.get('/:id/members', getDindiMembers);
-router.post('/:id/join', joinDindi);
+router.post('/:id/join', authenticateJwt, joinDindi);
 
 export default router;

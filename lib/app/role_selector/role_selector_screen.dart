@@ -78,6 +78,15 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen> {
       accentColor: AppColors.citizenAccent,
       route: AppRoutes.citizen,
     ),
+    RoleOption(
+      id: 'admin',
+      englishTitle: 'Admin Control Plane',
+      marathiTitle: 'प्रशासक',
+      description: 'Verification, approval & governance',
+      icon: Icons.admin_panel_settings,
+      accentColor: Colors.purple,
+      route: AppRoutes.admin,
+    ),
   ];
 
   void _onContinue() {
@@ -92,6 +101,17 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Maza Pandurang'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.admin),
+            icon: const Icon(Icons.admin_panel_settings, color: Colors.purple),
+            label: const Text(
+              'Admin',
+              style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Column(
