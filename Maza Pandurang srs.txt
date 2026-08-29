@@ -1,0 +1,2735 @@
+# Maza Pandurang — Final Software Requirements Specification
+
+**Document Version:** SRS v1.0  
+**Project:** Maza Pandurang  
+**Platform:** Flutter Mobile + Web Admin/Stakeholder Dashboard  
+**Backend:** Node.js + TypeScript  
+**Database:** Supabase PostgreSQL + PostGIS  
+**Target:** Functional Varithon/Buildathon MVP  
+**Development Constraint:** Approximately 2 days for the functional demonstration
+
+---
+
+# 1. Document Purpose
+
+This SRS defines the final system that the development team should build for **Maza Pandurang**, a Wari-focused digital platform intended to centralize navigation, essential services, Palkhi/Dindi information, emergency assistance, city guidance and multilingual AI assistance.
+
+The original Varithon proposal describes Maza Pandurang as a multilingual, voice-first platform combining AI assistance, service discovery, live navigation, Dindi management, Palkhi tracking and city guidance for Warkaris, Dindi leaders, NGOs, healthcare teams, police and local citizens. 
+
+The original problem is fragmentation of information about food, water, toilets, medical camps, accommodation, traffic and emergency services, particularly affecting elderly and first-time pilgrims. 
+
+This document converts that concept, together with the decisions made during requirements clarification, into an **implementation-ready specification**.
+
+---
+
+# 2. Product Vision
+
+## 2.1 Vision
+
+> **Maza Pandurang is a unified digital companion for the Wari that helps pilgrims find essential services, navigate safely, stay informed about the Palkhi and Dindi, access emergency assistance, and obtain Wari-specific information through a simple multilingual interface.**
+
+The application should prioritize:
+
+- simplicity
+- accessibility
+- location awareness
+- reliable information
+- safety
+- multilingual interaction
+- minimal interaction complexity
+
+The original proposal specifically identifies elderly and first-time Warkaris as important users and highlights their difficulty with conventional digital applications and navigation tools. 
+
+---
+
+# 3. Scope
+
+## 3.1 In Scope
+
+The final MVP contains:
+
+1. Public Wari map
+2. Service discovery
+3. Dynamic service availability
+4. Incorrect-service reporting
+5. Palkhi tracking
+6. Dindi management
+7. Dindi member/location management
+8. Wari route management
+9. Traffic and road-diversion management
+10. Emergency assistance
+11. Nearest medical-camp identification
+12. Lost-person assistance
+13. City/temple/heritage guide
+14. Google Maps navigation
+15. Tilak AI
+16. Multilingual voice interaction
+17. Role-based stakeholder dashboards
+18. Offline caching of critical information
+19. Bhakti section
+20. Optional application-support donation feature
+
+---
+
+# 4. Out of Scope for MVP
+
+The following must **not delay the core demonstration**:
+
+- AI ambulance dispatch
+- AI crowd-density prediction
+- IoT water/sanitation monitoring
+- Bluetooth mesh networking
+- smart Darshan prediction
+- full autonomous emergency dispatch
+- community social feed
+- large-scale analytics
+- complete offline map navigation
+- custom turn-by-turn navigation engine
+- expansion to other pilgrimages
+
+The original proposal itself places AI ambulance dispatch, crowd heatmaps, IoT monitoring, Bluetooth mesh, offline devotional content and Darshan prediction under future scope. 
+
+---
+
+# 5. Priority Classification
+
+| Priority | Meaning |
+|---|---|
+| P0 | Mandatory for functional demo |
+| P1 | Important, implement if P0 is stable |
+| P2 | Future/optional; must not delay MVP |
+
+---
+
+# 6. User Roles
+
+The system contains the following roles:
+
+```text
+PUBLIC USER
+PILGRIM / WARKARI
+DINDI LEADER
+NGO / SEVA PROVIDER
+HEALTHCARE PROVIDER
+POLICE
+ADMIN
+```
+
+---
+
+# 7. Authentication Model
+
+## 7.1 Public access
+
+Users do **not** need an account to:
+
+- open the application
+- view the map
+- view public service locations
+- search services
+- view Palkhi information
+- view public Dindi information
+- view traffic information
+- use the city guide
+- use basic Tilak functionality
+- open Google Maps navigation
+- view Bhakti content
+- report incorrect service information
+
+This is intentional. Requiring registration for basic service discovery would work against the project's accessibility goal.
+
+---
+
+# 8. Authentication
+
+## 8.1 Normal users
+
+Recommended:
+
+> **Phone OTP authentication**
+
+Use it only where identity is actually required.
+
+---
+
+## 8.2 Police
+
+Police cannot self-register.
+
+Workflow:
+
+```text
+ADMIN
+   |
+   | Create account
+   ↓
+POLICE ACCOUNT
+   |
+   ↓
+Credentials / OTP
+   |
+   ↓
+Police Dashboard
+```
+
+---
+
+## 8.3 NGO / Healthcare / Dindi Leader
+
+These roles can self-register.
+
+```text
+Registration
+     ↓
+Pending
+     ↓
+Admin Review
+     ↓
+Approved
+   /    \
+ YES     NO
+ |        |
+Active   Rejected
+```
+
+Until approved, the user cannot perform role-specific operations.
+
+---
+
+# 9. Role Permission Matrix
+
+| Capability | Public | Pilgrim | Dindi Leader | NGO | Healthcare | Police | Admin |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| View map | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| View services | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Report incorrect service | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Create service | No | No | No | Yes* | Yes* | Yes* | Yes |
+| Update own service | No | No | No | Yes | Yes | Yes | Yes |
+| Manage all services | No | No | No | No | No | No | Yes |
+| View Palkhi | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Publish Palkhi location | No | No | No | No | No | Authorized only | Yes |
+| Create Dindi | No | No | Yes | No | No | No | Yes |
+| Edit own Dindi | No | No | Yes | No | No | No | Yes |
+| Join Dindi | No | Yes | Yes | No | No | No | Yes |
+| View Dindi member locations | No | No | Own Dindi only | No | No | Authorized | Yes |
+| Traffic updates | No | No | No | No | No | Yes | Yes |
+| Emergency handling | No | Yes | Yes | No | Yes | Yes | Yes |
+| Approve registration | No | No | No | No | No | No | Yes |
+| Lost-person approval | No | No | No | No | No | Yes* | Yes |
+| Manage routes | No | No | Limited | No | No | No | Yes |
+| Manage users | No | No | No | No | No | No | Yes |
+
+`*` Exact permission is enforced through organization/approval status.
+
+---
+
+# 10. Application Architecture
+
+## 10.1 High-Level Architecture
+
+```text
+                         MAZA PANDURANG
+                               |
+             ┌─────────────────┴─────────────────┐
+             |                                   |
+       Flutter Mobile                       Web Dashboard
+             |                              React + TS
+             |                                   |
+             └─────────────────┬─────────────────┘
+                               |
+                         Node.js API
+                               |
+        ┌──────────────────────┼─────────────────────┐
+        |                      |                     |
+    Supabase              AI Gateway            Map Services
+        |                      |                     |
+ PostgreSQL                Gemini                 MapTiler
+   + PostGIS                OpenAI                   |
+        |                    Claude                OSM
+        |                                           |
+   ┌────┴─────┐                                 MapLibre
+   |          |
+  Auth     Realtime
+   |
+ Storage
+```
+
+The source architecture already defines a Flutter mobile application, dedicated stakeholder dashboards and a centralized backend responsible for synchronizing information. 
+
+---
+
+# 11. Technology Stack
+
+## 11.1 Mobile
+
+**Flutter + Dart**
+
+Responsibilities:
+
+- user interface
+- map rendering
+- GPS
+- voice input/output
+- local caching
+- notifications
+- authentication
+- API communication
+
+---
+
+## 11.2 Backend
+
+**Node.js + TypeScript**
+
+Recommended framework:
+
+> Express.js
+
+Backend responsibilities:
+
+- authentication validation
+- authorization
+- business logic
+- service search
+- emergency processing
+- Dindi processing
+- Palkhi processing
+- AI gateway
+- notifications
+- route management
+- report management
+
+---
+
+# 12. Database
+
+## Decision
+
+> **Supabase PostgreSQL + PostGIS**
+
+This replaces the original Firebase database proposal for the actual implementation.
+
+The original PDF lists Firebase among proposed technologies, but it does not require Firebase specifically; the architecture requires a centralized cloud backend, realtime information and offline capability. 
+
+Supabase is preferable for the finalized system because the application contains substantial relational and geographic data.
+
+---
+
+# 13. Supabase Components
+
+Use:
+
+```text
+Supabase
+├── PostgreSQL
+├── PostGIS
+├── Authentication
+├── Realtime
+└── Storage
+```
+
+Do not introduce another database.
+
+---
+
+# 14. PostGIS
+
+PostGIS is required because location-based queries are fundamental.
+
+Examples:
+
+```text
+Nearest medical camp
+Nearest water point
+Nearest toilet
+Nearest food camp
+Users inside lost-person radius
+Distance between Dindi members
+Distance from Palkhi
+Nearby traffic alert
+```
+
+---
+
+# 15. Data Model
+
+Core entities:
+
+```text
+users
+roles
+organizations
+services
+service_reports
+routes
+route_segments
+palkhi
+palkhi_locations
+dindis
+dindi_members
+dindi_locations
+traffic_updates
+emergency_requests
+lost_person_cases
+lost_person_sightings
+city_places
+notifications
+bhakti_content
+donations
+ai_provider_status
+```
+
+---
+
+# 16. Users
+
+```text
+users
+----------------
+id
+name
+phone
+email
+role
+status
+profile_photo
+language
+location_sharing_enabled
+created_at
+updated_at
+```
+
+Possible statuses:
+
+```text
+PENDING
+ACTIVE
+SUSPENDED
+REJECTED
+```
+
+---
+
+# 17. Organizations
+
+Used for:
+
+- NGOs
+- healthcare providers
+- other service providers
+
+Fields:
+
+```text
+id
+name
+type
+contact
+registration_details
+approval_status
+created_by
+created_at
+updated_at
+```
+
+---
+
+# 18. Services
+
+Each service has a unique identity.
+
+```text
+services
+----------------
+id
+organization_id
+type
+name
+description
+latitude
+longitude
+status
+contact
+capacity
+operating_hours
+last_updated_at
+approved
+created_at
+updated_at
+```
+
+Service types:
+
+```text
+MEDICAL
+FOOD
+WATER
+TOILET
+NIGHT_HALT
+POLICE
+PARKING
+HOSPITAL
+PHARMACY
+OTHER
+```
+
+The original proposal explicitly identifies medical camps, Annachhatras, drinking water, bio-toilets and night-halt locations. 
+
+---
+
+# 19. Service Availability
+
+Availability must be dynamically updateable.
+
+Example:
+
+```text
+MEDICAL
+OPEN
+FULL
+CLOSED
+
+FOOD
+AVAILABLE
+LIMITED
+FINISHED
+CLOSED
+
+NIGHT HALT
+AVAILABLE
+LIMITED
+FULL
+CLOSED
+```
+
+Every status update stores:
+
+```text
+last_updated_at
+updated_by
+```
+
+The application displays:
+
+> Updated 4 minutes ago
+
+This helps users judge whether information is current.
+
+---
+
+# 20. Service Reporting
+
+Any user can report incorrect information.
+
+Workflow:
+
+```text
+User
+ ↓
+Service
+ ↓
+Report Incorrect Information
+ ↓
+Select reason
+ ↓
+Submit
+ ↓
+Admin Review
+ ↓
+Correct / Reject / Investigate
+```
+
+Reasons:
+
+- location incorrect
+- service closed
+- availability incorrect
+- wrong contact
+- wrong description
+- duplicate
+- other
+
+Users cannot directly alter official service records.
+
+---
+
+# 21. Maps
+
+## Primary map
+
+```text
+MapLibre
+     ↓
+MapTiler
+     ↓
+OSM-based map data
+```
+
+MapLibre renders the map in Flutter.
+
+MapTiler supplies the map data/style infrastructure.
+
+---
+
+# 22. Map Features
+
+The map must support:
+
+- current user location
+- Wari route
+- Dindi route
+- Palkhi location
+- service markers
+- traffic alerts
+- parking
+- city places
+- emergency locations
+- lost-person broadcast area where authorized
+
+---
+
+# 23. Service Markers
+
+Every service must have a distinct marker category.
+
+Example:
+
+```text
+Medical → medical marker
+Food → food marker
+Water → water marker
+Toilet → toilet marker
+Night Halt → accommodation marker
+Police → police marker
+```
+
+Marker selection opens a service detail card.
+
+---
+
+# 24. Navigation
+
+The application provides two navigation options.
+
+### Maza Pandurang map
+
+Used for:
+
+- route visualization
+- current location
+- Wari route
+- service location
+- destination selection
+
+### Google Maps
+
+Used for actual external turn-by-turn navigation.
+
+Workflow:
+
+```text
+Service
+ ↓
+Directions
+ ↓
+Choose:
+   Maza Pandurang Map
+   OR
+   Google Maps
+```
+
+For the two-day MVP, we do **not** build a complete proprietary turn-by-turn navigation engine.
+
+---
+
+# 25. Wari Route Management
+
+## Admin
+
+Admin can:
+
+- create Wari route
+- edit route
+- publish route
+- deactivate route
+- update route information
+
+Route contains:
+
+```text
+route
+----------------
+id
+name
+geometry
+start_point
+end_point
+description
+status
+created_by
+updated_at
+```
+
+---
+
+# 26. Dindi Road Data
+
+Dindi leaders can provide road information relevant to their Dindi.
+
+Possible information:
+
+- road condition
+- temporary blockage
+- recommended path
+- local road information
+- Dindi-specific route
+
+Admin retains control over global Wari route data.
+
+---
+
+# 27. Palkhi Tracking
+
+The original system requires live GPS tracking and route updates for the official Palkhi. 
+
+Production workflow:
+
+```text
+Authorized Palkhi Personnel
+          ↓
+GPS
+          ↓
+Node.js
+          ↓
+Supabase
+          ↓
+Realtime
+          ↓
+Users
+```
+
+---
+
+# 28. Palkhi Authorization
+
+Only authorized personnel can publish Palkhi GPS.
+
+Admin can:
+
+- authorize Palkhi tracker
+- revoke tracker
+- view current location
+- override location
+- deactivate tracking
+
+---
+
+# 29. Palkhi Data
+
+Users can see:
+
+- current Palkhi location
+- route
+- direction
+- last update
+- next relevant route point
+- tracking status
+
+If live data is unavailable:
+
+> Last known location
+
+must be displayed.
+
+---
+
+# 30. Demo Palkhi Tracking
+
+Because there is no ongoing Wari during development, the demonstration will use **simulated GPS data**.
+
+Example:
+
+```text
+Palkhi Demo Tracker
+      ↓
+GPS coordinate A
+      ↓
+GPS coordinate B
+      ↓
+GPS coordinate C
+      ↓
+Map movement
+```
+
+The UI must indicate:
+
+> Demo Tracking
+
+Simulated data must never be represented as actual live government/Palkhi data.
+
+---
+
+# 31. Dindi Management
+
+Dindi Leaders can:
+
+- create Dindi
+- edit Dindi
+- manage members
+- publish announcements
+- provide route information
+- provide road information
+- view member locations where permitted
+
+The original proposal identifies Dindi management and group location sharing as core functionality. 
+
+---
+
+# 32. Dindi Creation
+
+```text
+Dindi Leader
+ ↓
+Create Dindi
+ ↓
+Name
+Description
+Leader
+Route
+Start point
+Destination
+ ↓
+Generate:
+QR
+Join Code
+```
+
+---
+
+# 33. Dindi Joining
+
+Primary method:
+
+> **QR code + short join code**
+
+Workflow:
+
+```text
+Leader
+ ↓
+Dindi created
+ ↓
+QR/code generated
+ ↓
+Pilgrim scans/enters code
+ ↓
+Join request
+ ↓
+Leader approval
+ ↓
+Member added
+```
+
+Public Dindi search is not required for MVP.
+
+---
+
+# 34. Dindi Location Privacy
+
+### Leader
+
+Can view:
+
+- member location
+- member last update
+- approximate distance/status
+
+### Member
+
+Can view:
+
+- Dindi location
+- leader location
+
+Cannot view:
+
+- other individual members' locations
+
+This is a deliberate privacy requirement.
+
+---
+
+# 35. Location Consent
+
+Location tracking must be opt-in.
+
+User can:
+
+```text
+Enable location sharing
+Disable location sharing
+```
+
+The application must not silently enable continuous background tracking.
+
+---
+
+# 36. Emergency System
+
+Emergency is a P0 safety feature.
+
+Workflow:
+
+```text
+User
+ ↓
+Emergency
+ ↓
+Get current location
+ ↓
+Select emergency type
+ ↓
+Find nearest relevant medical camp
+ ↓
+Display result
+ ↓
+Request assistance
+ ↓
+Confirmation
+ ↓
+Emergency request
+ ↓
+Healthcare / Police / Admin
+```
+
+---
+
+# 37. Nearest Medical Camp
+
+This functionality must work **without Tilak**.
+
+Example:
+
+```text
+User GPS
+ ↓
+Node.js
+ ↓
+PostGIS
+ ↓
+Nearest approved medical service
+ ↓
+Result
+```
+
+This ensures that safety functionality remains available even if every AI provider is down.
+
+---
+
+# 38. Emergency Through Tilak
+
+Tilak can initiate the emergency **workflow**, but cannot silently dispatch assistance.
+
+Example:
+
+> "I need medical help."
+
+Tilak:
+
+> "The nearest medical camp is 400 metres away. Would you like to request assistance?"
+
+```text
+[Cancel]
+[Request Assistance]
+```
+
+Only after explicit confirmation is an emergency request created.
+
+---
+
+# 39. Emergency Data
+
+```text
+emergency_requests
+----------------
+id
+user_id
+type
+latitude
+longitude
+nearest_service_id
+status
+assigned_to
+created_at
+resolved_at
+```
+
+Statuses:
+
+```text
+CREATED
+ACKNOWLEDGED
+ASSIGNED
+RESOLVED
+CANCELLED
+```
+
+---
+
+# 40. Traffic Management
+
+Police manually manage traffic information.
+
+Workflow:
+
+```text
+Police
+ ↓
+Create traffic update
+ ↓
+Road/location
+ ↓
+Type
+ ↓
+Description
+ ↓
+Effective period
+ ↓
+Publish
+```
+
+Types:
+
+```text
+ROAD_CLOSED
+DIVERSION
+HEAVY_TRAFFIC
+PARKING_CHANGE
+ROAD_OPEN
+OTHER
+```
+
+The original proposal explicitly includes traffic diversions, parking and public transport in the city-guide module. 
+
+---
+
+# 41. City Guide
+
+City guide contains curated Wari-relevant information.
+
+Categories:
+
+```text
+Temple
+Heritage
+Parking
+Public Transport
+Food
+Accommodation
+Medical
+Other
+```
+
+Each location includes:
+
+- name
+- description
+- coordinates
+- timings
+- contact where applicable
+- navigation option
+
+---
+
+# 42. Lost-Person System
+
+This is an application safety feature added during requirements clarification.
+
+## Workflow
+
+```text
+Lost Person Report
+        ↓
+Admin Review
+        ↓
+Approve
+        ↓
+Define last-seen location
+        ↓
+Define broadcast radius
+        ↓
+Notification
+        ↓
+Users in area
+        ↓
+Sightings
+        ↓
+Admin / Police
+```
+
+---
+
+# 43. Lost-Person Notification
+
+Only an approved case can be broadcast.
+
+Notification contains:
+
+- name
+- photograph if available
+- age
+- description
+- clothing
+- last-seen location
+- time last seen
+- instructions for reporting sightings
+
+Users within the selected geographic area receive the notification.
+
+---
+
+# 44. Lost-Person Sighting
+
+User selects:
+
+> **I've Seen This Person**
+
+Then submits:
+
+- current location
+- optional photo
+- description
+- approximate time
+- comments
+
+The information goes to Admin/authorized Police.
+
+The reporter's personal information must not be publicly exposed.
+
+---
+
+# 45. Tilak AI
+
+## Identity
+
+Tilak is the Wari-specific AI assistant for Maza Pandurang.
+
+The original proposal describes Tilak as a multilingual voice assistant supporting nearby services, emergency guidance and live pilgrimage information. 
+
+---
+
+# 46. Tilak Scope Restriction
+
+Tilak answers only **Wari-related questions**.
+
+Allowed:
+
+- Wari
+- Palkhi
+- Dindi
+- Wari routes
+- Wari services
+- medical camps
+- food/water/toilets
+- traffic
+- Wari-related city information
+- temples/heritage relevant to the pilgrimage
+- emergency guidance
+- application functionality
+
+Not allowed as general-purpose assistant:
+
+- coding
+- general academic questions
+- unrelated politics
+- unrelated entertainment
+- unrelated general knowledge
+
+Response:
+
+> "I can help only with Wari-related information."
+
+---
+
+# 47. Tilak Memory
+
+Tilak must **not maintain persistent conversation memory**.
+
+No:
+
+- user conversation history
+- personal AI memory
+- long-term conversation profile
+
+Each request is independent.
+
+Temporary request context is allowed when necessary for executing a current action.
+
+---
+
+# 48. Tilak Data Access
+
+Final decision:
+
+| Data | Access |
+|---|---|
+| Service database | Yes |
+| Palkhi location | Yes |
+| Dindi information | Yes |
+| Traffic | Yes |
+| City guide | Yes |
+| Emergency information | Yes, read-only |
+| Emergency action | Explicit confirmation required |
+
+---
+
+# 49. Tilak Tool Architecture
+
+Tilak must not receive unrestricted database access.
+
+Instead:
+
+```text
+Tilak
+ ↓
+AI Tool Gateway
+ ↓
+Authorized backend function
+ ↓
+Database/API
+ ↓
+Verified result
+ ↓
+Tilak
+```
+
+Tools:
+
+```text
+findNearbyService()
+getPalkhiLocation()
+getDindiInformation()
+getTrafficUpdates()
+getCityPlace()
+getEmergencyInformation()
+```
+
+---
+
+# 50. Example Tilak Workflow
+
+User:
+
+> "Where is the nearest medical camp?"
+
+```text
+Voice
+ ↓
+Saaras STT
+ ↓
+Node.js
+ ↓
+Tilak
+ ↓
+findNearbyService(MEDICAL, GPS)
+ ↓
+PostGIS
+ ↓
+Medical Camp
+ ↓
+Tilak
+ ↓
+Bulbul TTS
+ ↓
+User
+```
+
+Tilak does not invent the distance.
+
+---
+
+# 51. Tilak Actions
+
+Allowed:
+
+- open nearest service
+- show service on map
+- show Palkhi
+- show Dindi
+- open route
+- show traffic
+- show city place
+- initiate emergency confirmation screen
+
+Not allowed without confirmation:
+
+- send emergency request
+- reveal private Dindi member locations
+- change service information
+- change Palkhi location
+- publish traffic information
+- approve registrations
+
+---
+
+# 52. Dynamic AI Provider Architecture
+
+The application must not depend on a single AI provider.
+
+```text
+                    AI Gateway
+                        |
+             ┌──────────┼──────────┐
+             ↓          ↓          ↓
+          Gemini      OpenAI     Claude
+          Primary     Fallback   Fallback
+```
+
+The exact provider/model is configurable from backend environment/configuration.
+
+---
+
+# 53. AI Health Checking
+
+Each provider can have:
+
+```text
+AVAILABLE
+DEGRADED
+UNAVAILABLE
+```
+
+Health checks consider:
+
+- configuration
+- API credentials
+- connectivity
+- rate limiting
+- recent failures
+
+---
+
+# 54. AI Fallback
+
+Example:
+
+```text
+Gemini
+  ↓
+Unavailable
+  ↓
+OpenAI
+  ↓
+Available
+  ↓
+Use OpenAI
+```
+
+If all providers fail:
+
+```text
+Tilak unavailable
+```
+
+But core application features continue working.
+
+---
+
+# 55. AI Model Strategy
+
+Do not implement an elaborate automatic model-ranking system for the MVP.
+
+Use:
+
+```text
+PRIMARY_MODEL
+FALLBACK_MODEL
+SECONDARY_FALLBACK
+```
+
+The architecture should allow models to be changed without modifying Flutter or the rest of the backend.
+
+---
+
+# 56. Speech-to-Text
+
+Recommended:
+
+> **Sarvam Saaras v3**
+
+Primary languages:
+
+- Marathi
+- Hindi
+- English
+
+Pipeline:
+
+```text
+Microphone
+ ↓
+Audio
+ ↓
+Saaras
+ ↓
+Text
+ ↓
+Tilak
+```
+
+---
+
+# 57. Text-to-Speech
+
+Recommended:
+
+> **Sarvam Bulbul v3**
+
+Pipeline:
+
+```text
+Tilak response
+ ↓
+Bulbul
+ ↓
+Audio
+ ↓
+Flutter
+```
+
+The system should use the user's selected language.
+
+---
+
+# 58. Voice Interaction
+
+The UI should support:
+
+```text
+Tap microphone
+ ↓
+Speak
+ ↓
+Processing
+ ↓
+Response
+ ↓
+Audio playback
+```
+
+A text alternative must always be available.
+
+This is important because the original proposal emphasizes voice-first interaction for elderly and low-literacy users. 
+
+---
+
+# 59. Offline Strategy
+
+The application does not need the entire system to operate offline.
+
+Cache critical information locally:
+
+```text
+Wari route
+Service locations
+Service categories
+Emergency information
+City guide
+Last-known Palkhi position
+Dindi basic information
+```
+
+When network returns:
+
+```text
+Local cache
+ ↓
+Sync
+ ↓
+Latest server data
+```
+
+The original proposal specifically requires offline caching for low-network areas. 
+
+---
+
+# 60. Push Notifications
+
+Use:
+
+> **Firebase Cloud Messaging**
+
+Push notifications:
+
+- lost-person broadcasts
+- emergency status
+- important traffic updates
+- Dindi announcements
+- relevant Palkhi updates
+
+Do not send unnecessary notifications.
+
+---
+
+# 61. Bhakti Module
+
+The application contains:
+
+```text
+Bhakti
+├── Abhang
+├── Bhajan
+└── Aarti
+```
+
+For MVP, use only legally usable content.
+
+Do not upload copyrighted devotional recordings without permission.
+
+Full offline devotional audio remains lower priority because the original proposal places offline devotional content in future scope. 
+
+---
+
+# 62. Donation Module
+
+Optional feature:
+
+> **Support Maza Pandurang**
+
+Recommended slogan:
+
+> **"Your Faith. Our Seva. Together, a Safer Wari."**
+
+Flow:
+
+```text
+Support the App
+ ↓
+Select amount
+ ↓
+Payment provider
+ ↓
+Success
+ ↓
+Thank you
+```
+
+For the two-day demo, payment integration must not delay P0 functionality.
+
+---
+
+# 63. Admin Dashboard
+
+Admin dashboard is the central control system.
+
+Admin must be able to manage:
+
+```text
+Users
+Approvals
+Services
+Service reports
+Palkhi authorization
+Palkhi override
+Wari routes
+Dindi records
+Traffic
+Emergency requests
+Lost-person cases
+City guide
+Notifications
+AI provider status
+```
+
+---
+
+# 64. NGO Dashboard
+
+NGO can:
+
+- manage organization profile
+- create services
+- update own services
+- update availability
+- view reports related to own services
+
+Cannot:
+
+- approve itself
+- edit another organization's service
+- manage global routes
+- modify Palkhi data
+- approve other users
+
+---
+
+# 65. Healthcare Dashboard
+
+Healthcare provider can:
+
+- manage medical camps
+- update availability
+- indicate capacity
+- view relevant emergency requests
+- acknowledge emergency requests
+- update emergency status
+
+---
+
+# 66. Police Dashboard
+
+Police can:
+
+- view relevant emergencies
+- create traffic updates
+- create diversions
+- update road conditions
+- manage authorized lost-person cases
+- view relevant safety information
+
+Police accounts are created by Admin.
+
+---
+
+# 67. Dindi Leader Dashboard
+
+Dindi leader can:
+
+- manage own Dindi
+- edit Dindi information
+- generate QR/join code
+- approve members
+- view member locations
+- publish announcements
+- provide Dindi route/road information
+
+---
+
+# 68. Core Mobile Screens
+
+The Flutter application should contain:
+
+### Public
+
+1. Splash
+2. Language selection
+3. Home
+4. Map
+5. Services
+6. Service details
+7. Palkhi
+8. Dindi
+9. City Guide
+10. Traffic
+11. Emergency
+12. Tilak
+13. Bhakti
+14. Notifications
+15. Profile/Login
+
+### Additional
+
+16. Lost-person alert
+17. Lost-person sighting
+18. Dindi join
+19. Dindi details
+20. Settings
+21. Support/Donation
+
+---
+
+# 69. Home Screen
+
+The home screen should prioritize the actual Wari use cases.
+
+Recommended:
+
+```text
+MAZA PANDURANG
+
+[ Ask Tilak ]
+
+[ Find Services ]
+
+[ Palkhi ]
+
+[ My Dindi ]
+
+[ Emergency ]
+
+[ City Guide ]
+
+[ Traffic ]
+
+[ Bhakti ]
+```
+
+Avoid overcrowding.
+
+---
+
+# 70. Service Search
+
+Users can:
+
+- search by name
+- filter by type
+- filter by availability
+- sort by distance
+- open map
+- get directions
+
+---
+
+# 71. Service Detail
+
+Example:
+
+```text
+Shree Vitthal Medical Camp
+
+Medical
+
+OPEN
+
+Doctors available
+Capacity: 25
+
+420 m away
+
+Updated 3 min ago
+
+[Directions]
+[Call]
+[Report Incorrect Information]
+```
+
+---
+
+# 72. Palkhi Screen
+
+Show:
+
+```text
+Palkhi
+● Current Location
+
+Last Updated:
+2 min ago
+
+Route:
+Current route
+
+[View on Map]
+```
+
+If simulated:
+
+> Demo Tracking
+
+---
+
+# 73. Dindi Screen
+
+Show:
+
+```text
+My Dindi
+
+Dindi Name
+Leader
+Current Location
+Members
+Route
+Announcements
+
+[View Dindi]
+```
+
+Member location visibility must follow the privacy rules.
+
+---
+
+# 74. Emergency Screen
+
+Make it visually simple.
+
+```text
+EMERGENCY
+
+[Medical]
+[Police]
+[Other]
+
+Your location:
+Detected
+
+Nearest Medical Camp:
+400m
+
+[Request Assistance]
+```
+
+Do not hide the confirmation step.
+
+---
+
+# 75. API Architecture
+
+All business APIs should pass through Node.js.
+
+General structure:
+
+```text
+/api/auth
+/api/users
+/api/services
+/api/service-reports
+/api/routes
+/api/palkhi
+/api/dindis
+/api/traffic
+/api/emergency
+/api/lost-persons
+/api/city
+/api/tilak
+/api/ai
+/api/notifications
+/api/bhakti
+/api/donations
+```
+
+---
+
+# 76. Example Service APIs
+
+```text
+GET    /api/services
+GET    /api/services/:id
+GET    /api/services/nearby
+POST   /api/services
+PATCH  /api/services/:id
+POST   /api/services/:id/report
+```
+
+Authorization is enforced by Node.js.
+
+---
+
+# 77. Example Dindi APIs
+
+```text
+POST   /api/dindis
+GET    /api/dindis/:id
+PATCH  /api/dindis/:id
+POST   /api/dindis/:id/join
+POST   /api/dindis/:id/members/:userId/approve
+GET    /api/dindis/:id/members
+GET    /api/dindis/:id/locations
+POST   /api/dindis/:id/announcements
+```
+
+---
+
+# 78. Example Palkhi APIs
+
+```text
+GET   /api/palkhi/current
+GET   /api/palkhi/route
+POST  /api/palkhi/location
+POST  /api/palkhi/authorize
+PATCH /api/palkhi/location/override
+```
+
+Only authorized users can publish location.
+
+---
+
+# 79. Example Emergency APIs
+
+```text
+POST /api/emergency
+GET  /api/emergency/:id
+PATCH /api/emergency/:id/status
+GET /api/emergency/nearest-medical
+```
+
+`nearest-medical` must operate independently of AI.
+
+---
+
+# 80. Example Tilak APIs
+
+```text
+POST /api/tilak/chat
+POST /api/tilak/transcribe
+POST /api/tilak/speak
+GET  /api/tilak/providers/status
+```
+
+Internally:
+
+```text
+Tilak
+ ↓
+Intent/tool detection
+ ↓
+Authorized tools
+ ↓
+AI provider
+ ↓
+Response
+```
+
+---
+
+# 81. Security Requirements
+
+## Authentication
+
+All protected APIs must verify authenticated identity.
+
+## Authorization
+
+Backend must verify:
+
+```text
+user.role
+user.status
+organization.approval
+resource ownership
+```
+
+Do not rely on Flutter UI restrictions for security.
+
+---
+
+# 82. Role-Based Access Control
+
+Example:
+
+A Dindi leader attempts:
+
+```text
+PATCH /api/services/123
+```
+
+Node.js must reject it unless that user is authorized to modify that service.
+
+Similarly:
+
+```text
+Pilgrim
+ ↓
+POST /api/palkhi/location
+```
+
+must be rejected.
+
+---
+
+# 83. Location Privacy
+
+Location data is sensitive.
+
+Requirements:
+
+- explicit consent
+- minimum necessary collection
+- no public member-location sharing
+- no unnecessary location history
+- authorized access only
+- ability to disable sharing
+
+---
+
+# 84. AI Security
+
+AI must not be trusted with authorization.
+
+The LLM cannot decide:
+
+> "This user is an admin."
+
+Node.js decides.
+
+Similarly, AI cannot directly execute:
+
+```text
+DELETE service
+APPROVE NGO
+PUBLISH traffic
+CHANGE PALKHI
+SEND emergency
+```
+
+without backend authorization.
+
+---
+
+# 85. Demo Data Strategy
+
+Because the hackathon does not coincide with an active Wari, the demo will use controlled seed data.
+
+Seed:
+
+- services
+- Palkhi route
+- simulated Palkhi locations
+- Dindis
+- Dindi members
+- traffic alerts
+- city places
+- emergency camps
+- lost-person example
+- Bhakti content
+
+The demo must clearly distinguish simulated information from live information.
+
+---
+
+# 86. Demo Accounts
+
+Create predefined accounts:
+
+```text
+admin@demo
+police@demo
+healthcare@demo
+ngo@demo
+dindileader@demo
+```
+
+These are for demonstration only.
+
+---
+
+# 87. Demo Scenario
+
+The complete demonstration should be possible through one coherent scenario.
+
+### Scenario
+
+A pilgrim opens Maza Pandurang.
+
+```text
+Home
+ ↓
+Map
+ ↓
+Nearby services
+ ↓
+Medical camp
+```
+
+Then:
+
+> "Tilak, where is the nearest medical camp?"
+
+Tilak finds it using the backend.
+
+Then:
+
+```text
+Directions
+ ↓
+Google Maps
+```
+
+Next:
+
+```text
+Palkhi
+ ↓
+Live/demo location
+```
+
+Then:
+
+```text
+Dindi
+ ↓
+Join using QR/code
+```
+
+Then:
+
+```text
+Emergency
+ ↓
+Nearest medical camp
+ ↓
+Request assistance
+ ↓
+Confirmation
+```
+
+Then:
+
+```text
+Lost person
+ ↓
+Admin approval
+ ↓
+Area notification
+ ↓
+User submits sighting
+```
+
+This demonstrates the actual value proposition rather than a collection of unrelated screens.
+
+---
+
+# 88. Non-Functional Requirements
+
+## Performance
+
+Normal API responses should target:
+
+> < 2 seconds under normal demo conditions.
+
+Nearby-service queries should be optimized using PostGIS indexes.
+
+---
+
+## Availability
+
+Core functionality should remain available if:
+
+- AI provider fails
+- TTS fails
+- STT fails
+
+---
+
+## Scalability
+
+The architecture must allow additional:
+
+- AI providers
+- service types
+- routes
+- Dindis
+- cities
+- languages
+
+without rewriting the application.
+
+---
+
+# 89. Reliability
+
+If realtime data is unavailable:
+
+```text
+Live
+ ↓
+Last known
+```
+
+The application should show:
+
+> Last updated X minutes ago.
+
+Never silently display stale data as live.
+
+---
+
+# 90. Error Handling
+
+Examples:
+
+### GPS unavailable
+
+> "Location unavailable. Enable location access or select a location manually."
+
+### AI unavailable
+
+> "Tilak is temporarily unavailable. You can still use Maps, Services, Palkhi and Emergency."
+
+### Map unavailable
+
+Show cached critical information where available.
+
+### Service unavailable
+
+Show:
+
+> "Unable to load current availability."
+
+Do not invent availability.
+
+---
+
+# 91. Testing Requirements
+
+## Unit testing
+
+Test:
+
+- service distance calculations
+- authorization
+- emergency workflow
+- Dindi permissions
+- service reporting
+- AI fallback
+- status transitions
+
+---
+
+## Integration testing
+
+Test:
+
+```text
+Flutter
+ ↓
+Node.js
+ ↓
+Supabase
+```
+
+and:
+
+```text
+Node.js
+ ↓
+AI provider
+```
+
+and:
+
+```text
+Node.js
+ ↓
+Map/geolocation services
+```
+
+---
+
+# 92. Critical Acceptance Tests
+
+### AT-01 Public map
+
+**Given:** User has no account  
+**When:** User opens map  
+**Then:** Map and public services are visible.
+
+---
+
+### AT-02 Service discovery
+
+**Given:** User has GPS  
+**When:** User searches medical services  
+**Then:** nearby approved medical services appear ordered by distance.
+
+---
+
+### AT-03 Service update
+
+**Given:** approved healthcare provider  
+**When:** availability is changed  
+**Then:** users receive updated availability.
+
+---
+
+### AT-04 Service reporting
+
+**Given:** any user  
+**When:** incorrect information is reported  
+**Then:** Admin receives the report.
+
+---
+
+### AT-05 Police account
+
+**Given:** unregistered police officer  
+**When:** officer attempts self-registration  
+**Then:** police role cannot be self-created.
+
+---
+
+### AT-06 NGO approval
+
+**Given:** NGO self-registration  
+**When:** registration is submitted  
+**Then:** account remains pending until Admin approval.
+
+---
+
+### AT-07 Palkhi authorization
+
+**Given:** normal user  
+**When:** user attempts to publish Palkhi GPS  
+**Then:** request is rejected.
+
+---
+
+### AT-08 Dindi privacy
+
+**Given:** Dindi member  
+**When:** member views Dindi  
+**Then:** member cannot see individual locations of other members.
+
+---
+
+### AT-09 Emergency
+
+**Given:** user location  
+**When:** emergency is requested  
+**Then:** nearest medical camp is identified.
+
+---
+
+### AT-10 AI fallback
+
+**Given:** primary AI provider unavailable  
+**When:** user asks Tilak a valid question  
+**Then:** fallback provider handles the request.
+
+---
+
+### AT-11 AI unavailable
+
+**Given:** all AI providers unavailable  
+**When:** user searches nearest medical camp directly  
+**Then:** service search still works.
+
+---
+
+### AT-12 Lost person
+
+**Given:** Admin approves missing-person case  
+**When:** broadcast radius is configured  
+**Then:** users inside the geographic area receive the alert.
+
+---
+
+# 93. Definition of Done — P0
+
+The MVP is considered complete only when all of these work:
+
+```text
+[ ] Flutter application builds
+[ ] Backend runs
+[ ] Supabase connected
+[ ] Authentication works
+[ ] Role authorization works
+[ ] Public map works
+[ ] Map markers work
+[ ] Service search works
+[ ] Service availability works
+[ ] Service reporting works
+[ ] Admin approval works
+[ ] Police account creation works
+[ ] Palkhi demo tracking works
+[ ] Wari route works
+[ ] Dindi creation works
+[ ] Dindi QR/code joining works
+[ ] Dindi privacy works
+[ ] Traffic updates work
+[ ] Emergency workflow works
+[ ] Nearest medical camp works
+[ ] Lost-person workflow works
+[ ] Tilak text works
+[ ] Tilak voice works
+[ ] AI fallback works
+[ ] Google Maps navigation works
+[ ] Critical offline cache works
+[ ] Demo data seeded
+[ ] No critical authorization bypass
+```
+
+---
+
+# 94. P1
+
+Only after P0 is stable:
+
+```text
+[ ] City guide refinement
+[ ] Bhakti section
+[ ] Push notification refinement
+[ ] Better offline caching
+[ ] Donation UI/integration
+[ ] Advanced Dindi announcements
+```
+
+---
+
+# 95. P2
+
+Do not implement for the two-day demo unless everything else is finished:
+
+```text
+[ ] Full offline maps
+[ ] Full in-app turn-by-turn navigation
+[ ] AI ambulance dispatch
+[ ] Crowd-density AI
+[ ] IoT monitoring
+[ ] Bluetooth mesh
+[ ] Darshan prediction
+[ ] Community memories
+```
+
+---
+
+# 96. Recommended Project Structure
+
+## Flutter
+
+```text
+mobile/
+├── lib/
+│   ├── core/
+│   ├── config/
+│   ├── models/
+│   ├── services/
+│   ├── repositories/
+│   ├── features/
+│   │   ├── auth/
+│   │   ├── home/
+│   │   ├── map/
+│   │   ├── services/
+│   │   ├── palkhi/
+│   │   ├── dindi/
+│   │   ├── emergency/
+│   │   ├── traffic/
+│   │   ├── lost_person/
+│   │   ├── city_guide/
+│   │   ├── tilak/
+│   │   ├── bhakti/
+│   │   └── donation/
+│   └── main.dart
+```
+
+---
+
+# 97. Node.js Structure
+
+```text
+backend/
+├── src/
+│   ├── config/
+│   ├── middleware/
+│   ├── routes/
+│   ├── controllers/
+│   ├── services/
+│   ├── repositories/
+│   ├── models/
+│   ├── integrations/
+│   │   ├── ai/
+│   │   ├── maps/
+│   │   ├── speech/
+│   │   └── notifications/
+│   ├── tools/
+│   ├── utils/
+│   └── app.ts
+```
+
+The codebase should remain simple. Do not create duplicate service layers or abstract every trivial function.
+
+---
+
+# 98. AI Integration Structure
+
+```text
+integrations/ai/
+├── ai-provider.ts
+├── ai-gateway.ts
+├── gemini-provider.ts
+├── openai-provider.ts
+└── claude-provider.ts
+```
+
+```text
+tools/
+├── service-tools.ts
+├── palkhi-tools.ts
+├── dindi-tools.ts
+├── traffic-tools.ts
+├── city-tools.ts
+└── emergency-tools.ts
+```
+
+This makes provider switching straightforward.
+
+---
+
+# 99. Implementation Phases
+
+## Phase 1 — Foundation
+
+```text
+Flutter setup
+Node.js setup
+Supabase setup
+Authentication
+Database schema
+API structure
+Environment configuration
+```
+
+**Goal:** Application and backend communicate successfully.
+
+---
+
+## Phase 2 — Map + Services
+
+```text
+MapLibre
+MapTiler
+GPS
+Service schema
+Markers
+Nearby search
+Filters
+Availability
+Reports
+```
+
+**Goal:** A pilgrim can open the map and find real seeded services.
+
+---
+
+## Phase 3 — Roles + Admin
+
+```text
+Admin
+Police
+NGO
+Healthcare
+Dindi Leader
+Approval workflow
+Permissions
+```
+
+**Goal:** Stakeholders can manage appropriate data.
+
+---
+
+## Phase 4 — Palkhi + Dindi
+
+```text
+Palkhi
+GPS simulator
+Realtime
+Wari route
+Dindi creation
+QR/code joining
+Member management
+Location privacy
+```
+
+**Goal:** Demonstrate live pilgrimage coordination.
+
+---
+
+## Phase 5 — Emergency + Lost Person
+
+```text
+Emergency
+Nearest medical camp
+Emergency request
+Traffic
+Lost-person approval
+Geographic broadcast
+Sightings
+```
+
+**Goal:** Demonstrate safety functionality.
+
+---
+
+## Phase 6 — Tilak
+
+```text
+Text Tilak
+AI Gateway
+Tool calling
+Provider fallback
+Saaras
+Bulbul
+Voice UI
+```
+
+**Goal:** Demonstrate intelligent Wari-specific assistance.
+
+---
+
+## Phase 7 — Offline + Polish
+
+```text
+Critical caching
+Error states
+Loading states
+Demo data
+Permissions
+Navigation
+```
+
+**Goal:** Make the demo reliable.
+
+---
+
+# 100. Two-Day Execution Order
+
+If the deadline is genuinely two days, do **not** build every feature in parallel.
+
+### Day 1
+
+```text
+1. Project setup
+2. Supabase
+3. Node.js API
+4. Flutter shell
+5. Authentication
+6. Map
+7. Services
+8. Admin
+9. Roles
+10. Palkhi demo
+11. Dindi
+```
+
+### Day 2
+
+```text
+1. Emergency
+2. Traffic
+3. Lost person
+4. Tilak
+5. STT/TTS
+6. Google Maps
+7. Offline cache
+8. Demo data
+9. Integration testing
+10. Bug fixing
+11. Demo rehearsal
+```
+
+If time becomes tight, **cut Bhakti and Donation before cutting Emergency, Services, Palkhi, Dindi or Tilak.**
+
+---
+
+# 101. Final System Workflow
+
+The complete product can be understood as five interconnected flows.
+
+```text
+                         MAZA PANDURANG
+                               |
+       ┌───────────────────────┼────────────────────────┐
+       |                       |                        |
+    DISCOVER                 TRACK                   ASSIST
+       |                       |                        |
+   Services                  Palkhi                   Tilak
+   City Guide                Dindi                    Voice
+   Traffic                   Routes                   AI Tools
+       |                       |                        |
+       └───────────────────────┼────────────────────────┘
+                               |
+                             SAFETY
+                               |
+                ┌──────────────┼──────────────┐
+                |              |              |
+             Emergency     Lost Person     Traffic
+                |
+        Nearest Medical Camp
+```
+
+---
+
+# 102. Final Architecture Decision
+
+The final system should therefore be treated as:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│                    FLUTTER MOBILE APP                   │
+│                                                         │
+│ Map | Services | Palkhi | Dindi | Emergency | Tilak    │
+│ Traffic | City Guide | Lost Person | Bhakti | Support   │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+                         HTTPS/API
+                            │
+┌───────────────────────────▼─────────────────────────────┐
+│                    NODE.JS + TYPESCRIPT                  │
+│                                                         │
+│ Auth | RBAC | Business Logic | APIs | AI Gateway        │
+│ Emergency | Services | Palkhi | Dindi | Notifications   │
+└───────┬────────────────────┬────────────────────┬───────┘
+        │                    │                    │
+        ▼                    ▼                    ▼
+┌───────────────┐    ┌────────────────┐   ┌──────────────┐
+│   SUPABASE    │    │   AI GATEWAY   │   │ MAP SERVICES │
+│               │    │                │   │              │
+│ PostgreSQL    │    │ Gemini         │   │ MapTiler     │
+│ PostGIS       │    │ OpenAI         │   │ OSM          │
+│ Auth          │    │ Claude         │   │ MapLibre     │
+│ Realtime      │    │                │   │ Google Maps  │
+│ Storage       │    └────────────────┘   └──────────────┘
+└───────────────┘
+        │
+        ├── Services
+        ├── Users/Roles
+        ├── Palkhi
+        ├── Dindi
+        ├── Routes
+        ├── Traffic
+        ├── Emergency
+        ├── Lost Persons
+        └── City Guide
+
+External:
+Sarvam Saaras v3 → STT
+Sarvam Bulbul v3 → TTS
+Firebase FCM → Push Notifications
+```
+
+---
+
+# 103. Final Product Principle
+
+The most important architectural rule for this project is:
+
+> **AI should enhance the application, not control it.**
+
+The actual system of record is:
+
+```text
+Supabase
+     ↑
+Node.js
+     ↑
+Flutter
+```
+
+Tilak sits on top of that system:
+
+```text
+                   Tilak
+                     ↓
+               AI Tool Gateway
+                     ↓
+                Node.js APIs
+                     ↓
+                Verified data
+```
+
+Therefore, if Gemini is down, OpenAI is down, Sarvam is down, or the AI subsystem completely fails, users can still:
+
+- find a medical camp
+- view services
+- view the Palkhi
+- view their Dindi
+- see traffic
+- request emergency assistance
+- access the map
+- navigate
+- receive safety notifications
+
+That is the correct architecture for a safety-oriented Wari application.
+
+The original proposal's central objective is to bring fragmented Wari services, navigation, communication and information into one location-aware ecosystem.  This SRS preserves that objective while restricting the two-day implementation to features that can actually be made functional and demonstrated reliably.
