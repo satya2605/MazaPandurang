@@ -15,7 +15,8 @@ void main() async {
       ),
       anonKey: const String.fromEnvironment(
         'SUPABASE_ANON_KEY',
-        defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqbmhzYXh1d3lhaXJmZ3JjaXlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTM0ODMsImV4cCI6MjA3NDk4OTQ4M30.demo-placeholder-anon-key',
+        defaultValue:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqbmhzYXh1d3lhaXJmZ3JjaXlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5ODIxNzYsImV4cCI6MjEwMzU1ODE3Nn0.RXadCYW1QDqSgOkZPMV4Tl8XiveAIpRyuCN__jb_x5I',
       ),
     );
     await AuthService().restoreSession();
