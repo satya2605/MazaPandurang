@@ -29,6 +29,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   List<AdminServiceReport> _serviceReports = [];
   List<AdminUser> _users = [];
   List<AdminAuditLog> _auditLogs = [];
+  List<AdminPalkhi> _palkhis = [];
 
   // Filter states
   String _ngoFilter = 'ALL';
@@ -39,7 +40,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _fetchAllData();
   }
 
@@ -84,6 +85,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         _repository.getServiceReports().catchError((_) => <AdminServiceReport>[]),
         _repository.getUsers().catchError((_) => <AdminUser>[]),
         _repository.getAuditLogs().catchError((_) => <AdminAuditLog>[]),
+        _repository.getPalkhis().catchError((_) => <AdminPalkhi>[]),
       ]);
 
       if (mounted) {
@@ -97,6 +99,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           _serviceReports = results[6] as List<AdminServiceReport>;
           _users = results[7] as List<AdminUser>;
           _auditLogs = results[8] as List<AdminAuditLog>;
+          _palkhis = results[9] as List<AdminPalkhi>;
           _isLoading = false;
         });
       }
@@ -358,6 +361,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           indicatorColor: Colors.amber,
           tabs: const [
             Tab(icon: Icon(Icons.dashboard), text: 'Overview'),
+            Tab(icon: Icon(Icons.directions_bus), text: 'Palkhi Registry'),
             Tab(icon: Icon(Icons.volunteer_activism), text: 'NGOs'),
             Tab(icon: Icon(Icons.medical_services), text: 'Services (2-Gate)'),
             Tab(icon: Icon(Icons.group), text: 'Dindi Leaders'),
@@ -385,6 +389,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   controller: _tabController,
                   children: [
                     _buildOverviewTab(),
+                    _buildPalkhisTab(),
                     _buildNgosTab(),
                     _buildServicesTab(),
                     _buildDindiLeadersTab(),
@@ -884,4 +889,281 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       },
     );
   }
+
+  Widget _buildPalkhisTab() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCreatePalkhiDialog,
+        backgroundColor: Colors.purple.shade800,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Create New Palkhi'),
+      ),
+      body: _palkhis.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.directions_bus_outlined, size: 48, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  const Text('No Palkhi entities configured in registry.', style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(onPressed: _showCreatePalkhiDialog, child: const Text('Add Palkhi')),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _palkhis.length,
+              itemBuilder: (context, index) {
+                final palkhi = _palkhis[index];
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.directions_bus, color: Colors.orange, size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    palkhi.name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  Text(
+                                    'Saint: ${palkhi.saint} | Route: ${palkhi.startPoint} ➔ ${palkhi.destination}',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: palkhi.isPublished ? Colors.green.shade100 : Colors.amber.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                palkhi.isPublished ? 'PUBLISHED' : 'UNPUBLISHED',
+                                style: TextStyle(
+                                  color: palkhi.isPublished ? Colors.green.shade900 : Colors.amber.shade900,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, size: 16, color: Colors.purple),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Current Stage: ${palkhi.currentStage} (Next: ${palkhi.nextStop})',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_pin, size: 16, color: Colors.blue),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Operator: ${palkhi.operatorName} ${palkhi.operatorEmail.isNotEmpty ? "(${palkhi.operatorEmail})" : ""}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: palkhi.assignedOperatorId != null ? FontWeight.bold : FontWeight.normal,
+                                  color: palkhi.assignedOperatorId != null ? Colors.blue.shade900 : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (!palkhi.isPublished)
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final success = await _repository.publishPalkhi(palkhi.id);
+                                  if (success) {
+                                    _showMessage('Palkhi published to public live map.');
+                                    _fetchAllData();
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                icon: const Icon(Icons.visibility, size: 16),
+                                label: const Text('Publish'),
+                              )
+                            else
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final success = await _repository.unpublishPalkhi(palkhi.id);
+                                  if (success) {
+                                    _showMessage('Palkhi unpublished from public view.');
+                                    _fetchAllData();
+                                  }
+                                },
+                                icon: const Icon(Icons.visibility_off, size: 16),
+                                label: const Text('Unpublish'),
+                              ),
+                            OutlinedButton.icon(
+                              onPressed: () => _showAssignOperatorDialog(palkhi),
+                              icon: const Icon(Icons.person_add, size: 16),
+                              label: Text(palkhi.assignedOperatorId != null ? 'Change Operator' : 'Assign Operator'),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Delete Palkhi Entity'),
+                                    content: Text('Are you sure you want to delete ${palkhi.name}?'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  final success = await _repository.deletePalkhi(palkhi.id);
+                                  if (success) {
+                                    _showMessage('Palkhi deleted.');
+                                    _fetchAllData();
+                                  }
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Future<void> _showCreatePalkhiDialog() async {
+    final nameCtrl = TextEditingController(text: 'Sant Tukaram Maharaj Palkhi');
+    final saintCtrl = TextEditingController(text: 'Sant Tukaram Maharaj');
+    final startCtrl = TextEditingController(text: 'Dehu');
+    final destCtrl = TextEditingController(text: 'Pandharpur');
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create Central Palkhi Entity'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Palkhi Name')),
+              const SizedBox(height: 8),
+              TextField(controller: saintCtrl, decoration: const InputDecoration(labelText: 'Saint / Tradition')),
+              const SizedBox(height: 8),
+              TextField(controller: startCtrl, decoration: const InputDecoration(labelText: 'Start Point')),
+              const SizedBox(height: 8),
+              TextField(controller: destCtrl, decoration: const InputDecoration(labelText: 'Destination')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await _repository.createPalkhi({
+                'name': nameCtrl.text.trim(),
+                'saint': saintCtrl.text.trim(),
+                'start_point': startCtrl.text.trim(),
+                'destination': destCtrl.text.trim(),
+              });
+              if (success) {
+                _showMessage('New Palkhi entity created (Unpublished by default).');
+                _fetchAllData();
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAssignOperatorDialog(AdminPalkhi palkhi) async {
+    final operatorIdCtrl = TextEditingController(text: palkhi.assignedOperatorId ?? '00000000-0000-0000-0000-000000000002');
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Assign Operator to ${palkhi.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter Profile User ID for Privileged Location Operator:', style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: operatorIdCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Operator User ID (UUID)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          if (palkhi.assignedOperatorId != null)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final success = await _repository.assignPalkhiOperator(palkhi.id, null);
+                if (success) {
+                  _showMessage('Operator assignment removed.');
+                  _fetchAllData();
+                }
+              },
+              child: const Text('Remove Operator', style: TextStyle(color: Colors.red)),
+            ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final opId = operatorIdCtrl.text.trim();
+              if (opId.isNotEmpty) {
+                final success = await _repository.assignPalkhiOperator(palkhi.id, opId);
+                if (success) {
+                  _showMessage('Location Operator assigned successfully.');
+                  _fetchAllData();
+                }
+              }
+            },
+            child: const Text('Assign Operator'),
+          ),
+        ],
+      ),
+    );
+  }
 }
+

@@ -163,6 +163,66 @@ class AdminDindi {
   }
 }
 
+/// Admin Palkhi Entity Model.
+class AdminPalkhi {
+  final String id;
+  final String name;
+  final String saint;
+  final String description;
+  final String startPoint;
+  final String destination;
+  final String currentStage;
+  final String nextStop;
+  final double latitude;
+  final double longitude;
+  final String status;
+  final bool isPublished;
+  final String? assignedOperatorId;
+  final String operatorName;
+  final String operatorEmail;
+  final String updatedAt;
+
+  const AdminPalkhi({
+    required this.id,
+    required this.name,
+    required this.saint,
+    required this.description,
+    required this.startPoint,
+    required this.destination,
+    required this.currentStage,
+    required this.nextStop,
+    required this.latitude,
+    required this.longitude,
+    required this.status,
+    required this.isPublished,
+    this.assignedOperatorId,
+    required this.operatorName,
+    required this.operatorEmail,
+    required this.updatedAt,
+  });
+
+  factory AdminPalkhi.fromJson(Map<String, dynamic> json) {
+    return AdminPalkhi(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Palkhi',
+      saint: json['saint']?.toString() ?? 'Sant Dnyaneshwar Maharaj',
+      description: json['description']?.toString() ?? '',
+      startPoint: json['start_point']?.toString() ?? 'Alandi',
+      destination: json['destination']?.toString() ?? 'Pandharpur',
+      currentStage: json['current_stage']?.toString() ?? json['currentStage']?.toString() ?? '',
+      nextStop: json['next_stop']?.toString() ?? json['nextStop']?.toString() ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 18.6772,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 73.8967,
+      status: json['status']?.toString() ?? 'ACTIVE',
+      isPublished: json['is_published'] == true,
+      assignedOperatorId: json['assigned_operator_id']?.toString() ?? json['operator']?['id']?.toString(),
+      operatorName: json['operator']?['display_name']?.toString() ?? 'No Operator Assigned',
+      operatorEmail: json['operator']?['email']?.toString() ?? '',
+      updatedAt: json['updated_at']?.toString() ?? '',
+    );
+  }
+}
+
 /// Admin Dindi Leader Application Model.
 class AdminDindiLeader {
   final String id;

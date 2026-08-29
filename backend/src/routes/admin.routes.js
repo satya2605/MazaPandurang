@@ -30,6 +30,13 @@ import {
   approveDindiLeader,
   rejectDindiLeader,
   suspendDindiLeader,
+  getAdminPalkhis,
+  getAdminPalkhiById,
+  createPalkhi,
+  updatePalkhi,
+  publishPalkhi,
+  unpublishPalkhi,
+  deletePalkhi,
 } from '../controllers/admin.controller.js';
 
 const router = Router();
@@ -40,6 +47,15 @@ router.use(requireAdminRole);
 // Dashboard & Audit Logs
 router.get('/dashboard', getAdminDashboard);
 router.get('/audit-logs', getAdminAuditLogs);
+
+// Palkhi Moderation & Registry
+router.get('/palkhis', getAdminPalkhis);
+router.get('/palkhis/:id', getAdminPalkhiById);
+router.post('/palkhis', createPalkhi);
+router.patch('/palkhis/:id', updatePalkhi);
+router.patch('/palkhis/:id/publish', publishPalkhi);
+router.patch('/palkhis/:id/unpublish', unpublishPalkhi);
+router.delete('/palkhis/:id', deletePalkhi);
 
 // NGO Moderation
 router.get('/ngos', getAdminNgos);

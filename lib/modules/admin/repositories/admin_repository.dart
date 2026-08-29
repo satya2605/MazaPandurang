@@ -199,4 +199,74 @@ class AdminRepository {
     }
     return [];
   }
+
+  // --- Palkhi Moderation & Operator Management ---
+
+  Future<List<AdminPalkhi>> getPalkhis() async {
+    try {
+      final res = await _apiClient.get('/admin/palkhis');
+      if (res.statusCode == 200) {
+        final List list = jsonDecode(res.body);
+        return list.map((e) => AdminPalkhi.fromJson(e as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<bool> createPalkhi(Map<String, dynamic> payload) async {
+    try {
+      final res = await _apiClient.post('/admin/palkhis', body: payload);
+      return res.statusCode == 201 || res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> updatePalkhi(String id, Map<String, dynamic> payload) async {
+    try {
+      final res = await _apiClient.patch('/admin/palkhis/$id', body: payload);
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> publishPalkhi(String id) async {
+    try {
+      final res = await _apiClient.patch('/admin/palkhis/$id/publish');
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> unpublishPalkhi(String id) async {
+    try {
+      final res = await _apiClient.patch('/admin/palkhis/$id/unpublish');
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> assignPalkhiOperator(String id, String? operatorId) async {
+    try {
+      final res = await _apiClient.patch('/admin/palkhis/$id', body: {
+        'assigned_operator_id': operatorId,
+      });
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deletePalkhi(String id) async {
+    try {
+      final res = await _apiClient.delete('/admin/palkhis/$id');
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }
+

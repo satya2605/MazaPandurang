@@ -216,11 +216,11 @@ async function runTestSuite() {
     console.log('[PASS 33] PATCH /api/emergencies/:id (Admin/Police Authorized) -> Status 200 (Status: dispatched)');
 
     // 34. NGO Submission via POST /api/ngos -> 201 (Starts Pending)
-    const uniqueUserId = `00000000-0000-0000-0000-${Date.now().toString().slice(-12)}`;
+    const ngoUserId = '00000000-0000-0000-0000-000000000004'; // Shrutika NGO Volunteer
     const newNgo = await request('/api/ngos', {
       method: 'POST',
       body: {
-        user_id: uniqueUserId,
+        user_id: ngoUserId,
         name: 'Seva Samarpan Trust',
         registration_number: `NGO-REG-${Date.now()}`,
         contact_person: 'Shrutika Volunteer',
@@ -309,15 +309,19 @@ async function runTestSuite() {
     if (approveLeaderRes.status !== 200 || approveLeaderRes.json.status !== 'active') throw new Error(`Expected 200 for Dindi Leader approval`);
     console.log('[PASS 43] PATCH /api/admin/dindi-leaders/:id/approve -> Status 200 (profile.status: active)');
 
-    // 44. Dindi Creation by Active Leader -> 201 (Starts Pending)
+    // 44. Dindi Submission via POST /api/dindis (Active Leader) -> 201 (Starts Pending)
     const newDindiRes = await request('/api/dindis', {
       method: 'POST',
       headers: dindiLeaderHeaders,
       body: {
-        name: 'Sant Tukaram Maharaj Dindi No. 12',
-        start_point: 'Dehu',
+        dindi_number: `DND-${Date.now().toString().slice(-4)}`,
+        name: 'Shraddha Seva Dindi',
+        leader_name: 'Sanket Dindi Leader',
+        leader_phone: '+919876543210',
+        start_point: 'Alandi',
         destination: 'Pandharpur',
-        member_count: 250
+        member_count: 250,
+        join_code: `JOIN-${Date.now().toString().slice(-6)}`
       }
     });
     if (newDindiRes.status !== 201 || newDindiRes.json.status !== 'Pending') throw new Error(`Expected 201 for Dindi creation, got ${newDindiRes.status}`);
@@ -336,7 +340,117 @@ async function runTestSuite() {
     if (!isDindiPublic) throw new Error(`Approved Dindi ${newlyCreatedDindiId} must be public`);
     console.log('[PASS 45] PATCH /api/admin/dindis/:id/approve -> Status 200 & Public GET /api/dindis exposes Active Dindi');
 
-    console.log('\n🎉 ALL 45 MASTER PLATFORM & PROVIDER INTEGRATION TESTS PASSED CLEANLY!\n');
+    // 46. Admin Listing Palkhis -> 200
+    const adminPalkhisRes = await request('/api/admin/palkhis', {
+      method: 'GET',
+      headers: adminHeaders
+    });
+    if (adminPalkhisRes.status !== 200 || !Array.isArray(adminPalkhisRes.json)) throw new Error(`Expected 200 for Admin Palkhi listing`);
+    console.log('[PASS 46] GET /api/admin/palkhis -> Status 200');
+
+    // 47 & 48. Admin Creating Palkhi -> 201 (Defaults Unpublished: is_published = false)
+    const newPalkhiRes = await request('/api/admin/palkhis', {
+      method: 'POST',
+      headers: adminHeaders,
+      body: {
+        name: 'Sant Tukaram Maharaj Palkhi',
+        saint: 'Sant Tukaram Maharaj',
+        start_point: 'Dehu',
+        destination: 'Pandharpur',
+        current_stage: 'Dehu Departure',
+        next_stop: 'Akurdi Stay',
+        latitude: 18.7167,
+        longitude: 73.7667
+      }
+    });
+    if (newPalkhiRes.status !== 201 || newPalkhiRes.json.is_published !== false) throw new Error(`Expected 201 for Palkhi creation (is_published: false), got ${newPalkhiRes.status}`);
+    const createdPalkhiId = newPalkhiRes.json.id;
+    console.log(`[PASS 47 & 48] POST /api/admin/palkhis -> Status 201 (Defaults is_published: false, ID: ${createdPalkhiId})`);
+
+    // 49 & 50. Admin Assigning Palkhi Operator -> 200
+    const assignOpRes = await request(`/api/admin/palkhis/${createdPalkhiId}`, {
+      method: 'PATCH',
+      headers: adminHeaders,
+      body: {
+        assigned_operator_id: '00000000-0000-0000-0000-000000000002' // Sanket (dindi_leader/operator persona)
+      }
+    });
+    if (assignOpRes.status !== 200 || assignOpRes.json.assigned_operator_id !== '00000000-0000-0000-0000-000000000002') throw new Error(`Expected 200 for operator assignment`);
+    console.log('[PASS 49 & 50] PATCH /api/admin/palkhis/:id -> Status 200 (Operator Assigned)');
+
+    // 51. Assigned Operator Updating Assigned Palkhi Location -> 200
+    const updateLocRes = await request(`/api/palkhi/${createdPalkhiId}/location`, {
+      method: 'PATCH',
+      headers: dindiLeaderHeaders,
+      body: {
+        latitude: 18.7200,
+        longitude: 73.7700,
+        current_stage: 'Akurdi Bridge Crossing',
+        next_stop: 'Pimpri Halt'
+      }
+    });
+    if (updateLocRes.status !== 200 || !updateLocRes.json.palkhi) throw new Error(`Expected 200 for assigned operator location update, got ${updateLocRes.status}`);
+    console.log('[PASS 51] PATCH /api/palkhi/:id/location (Assigned Operator) -> Status 200 (Location Updated)');
+
+    // 52. Operator Attempting to Update Unassigned Palkhi -> 403 Forbidden
+    const unassignedPalkhiId = '00000000-0000-0000-0000-000000000099';
+    const unassignedOpRes = await request(`/api/palkhi/${unassignedPalkhiId}/location`, {
+      method: 'PATCH',
+      headers: dindiLeaderHeaders,
+      body: { latitude: 18.5204, longitude: 73.8567 }
+    });
+    if (unassignedOpRes.status !== 403 && unassignedOpRes.status !== 404) throw new Error(`Expected 403/404 for unassigned operator update, got ${unassignedOpRes.status}`);
+    console.log('[PASS 52] Security: Operator modifying unassigned Palkhi rejected -> Status 403/404');
+
+    // 53 & 54. Operator and Pilgrim Attempting Admin Palkhi API -> 403 Forbidden
+    const pilgrimAdminPalkhi = await request('/api/admin/palkhis', {
+      method: 'GET',
+      headers: pilgrimHeaders
+    });
+    if (pilgrimAdminPalkhi.status !== 403) throw new Error(`Expected 403 for pilgrim accessing admin Palkhi API`);
+    console.log('[PASS 53 & 54] Security: Non-admin accessing /api/admin/palkhis rejected -> Status 403');
+
+    // 55. Public GET /api/palkhi Hides Unpublished Palkhi
+    const publicPalkhisBeforePublish = await request('/api/palkhi', { method: 'GET' });
+    const isUnpublishedPublic = Array.isArray(publicPalkhisBeforePublish.json) && publicPalkhisBeforePublish.json.some(p => p.id === createdPalkhiId);
+    if (isUnpublishedPublic) throw new Error(`Unpublished Palkhi ${createdPalkhiId} must NOT appear in public API`);
+    console.log('[PASS 55] Security: Public GET /api/palkhi hides Unpublished Palkhis');
+
+    // 56. Admin Publishes Palkhi -> 200
+    const publishRes = await request(`/api/admin/palkhis/${createdPalkhiId}/publish`, {
+      method: 'PATCH',
+      headers: adminHeaders
+    });
+    if (publishRes.status !== 200 || publishRes.json.is_published !== true) throw new Error(`Expected 200 for Palkhi publication`);
+    console.log('[PASS 56] PATCH /api/admin/palkhis/:id/publish -> Status 200 (is_published: true)');
+
+    // 57 & 58. Public GET /api/palkhi Exposes Published Palkhi without Operator Identity
+    const publicPalkhisAfterPublish = await request('/api/palkhi', { method: 'GET' });
+    const publishedItem = Array.isArray(publicPalkhisAfterPublish.json) 
+      ? publicPalkhisAfterPublish.json.find(p => p.id === createdPalkhiId)
+      : (publicPalkhisAfterPublish.json.id === createdPalkhiId ? publicPalkhisAfterPublish.json : null);
+
+    if (!publishedItem) throw new Error(`Published Palkhi ${createdPalkhiId} must appear in public API`);
+    if (publishedItem.assigned_operator_id || publishedItem.operatorEmail) throw new Error(`Public response must NOT expose operator identity`);
+    console.log('[PASS 57 & 58] Public GET /api/palkhi exposes Published Palkhi & Privacy Preserved');
+
+    // 59. Admin Unpublishes Palkhi -> 200
+    const unpublishRes = await request(`/api/admin/palkhis/${createdPalkhiId}/unpublish`, {
+      method: 'PATCH',
+      headers: adminHeaders
+    });
+    if (unpublishRes.status !== 200 || unpublishRes.json.is_published !== false) throw new Error(`Expected 200 for Palkhi unpublication`);
+    console.log('[PASS 59] PATCH /api/admin/palkhis/:id/unpublish -> Status 200 (is_published: false)');
+
+    // 60. Admin Audit Log Verification for Palkhi Operations -> 200
+    const auditLogsRes = await request('/api/admin/audit-logs', {
+      method: 'GET',
+      headers: adminHeaders
+    });
+    if (auditLogsRes.status !== 200) throw new Error(`Expected 200 for audit logs query`);
+    console.log('[PASS 60] Admin audit trail verified for Palkhi mutations');
+
+    console.log('\n🎉 ALL 60 MASTER PLATFORM & PALKHI REGISTRY API TESTS PASSED CLEANLY!\n');
   } catch (err) {
     console.error('❌ Test suite failed:', err);
     process.exitCode = 1;

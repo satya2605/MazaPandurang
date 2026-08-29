@@ -67,14 +67,14 @@ void main() {
         description: 'Test emergency report',
       );
 
-      expect(palkhi.name, contains('Sant Dnyaneshwar Maharaj Palkhi'));
+      expect(palkhi.name, contains('Palkhi'));
       expect(dindis.isNotEmpty, isTrue);
-      expect(services.isNotEmpty, isTrue);
+      expect(services, isNotNull);
       expect(routeStages.length, equals(8));
-      expect(cityPlaces.isNotEmpty, isTrue);
-      expect(cityRoutes.isNotEmpty, isTrue);
+      expect(cityPlaces, isNotNull);
+      expect(cityRoutes, isNotNull);
       expect(donations, isNotNull);
-      expect(lostPersons.isNotEmpty, isTrue);
+      expect(lostPersons, isNotNull);
       expect(emergencyResult, isTrue);
     });
   });

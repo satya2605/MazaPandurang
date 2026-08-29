@@ -40,10 +40,11 @@ async function fetchLiveWariContext({ latitude, longitude }) {
   };
 
   try {
-    // 1. Palkhi Tracking (Exact table: palkhi_tracking)
+    // 1. Palkhi Tracking (Exact table: palkhi_tracking, published only)
     const { data: palkhiData } = await client
       .from('palkhi_tracking')
       .select('id, name, current_stage, next_stop, latitude, longitude, updated_at')
+      .eq('is_published', true)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();

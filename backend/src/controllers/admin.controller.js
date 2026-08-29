@@ -628,4 +628,221 @@ export async function updateAdminServiceReport(req, res, next) {
   }
 }
 
+// 9. PALKHI REGISTRY MODERATION
+export async function getAdminPalkhis(req, res, next) {
+  try {
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('palkhi_tracking')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAdminPalkhiById(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('palkhi_tracking')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Palkhi entity not found' });
+      throw error;
+    }
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+import { publishedStateMap } from './palkhi.controller.js';
+
+export async function createPalkhi(req, res, next) {
+  try {
+    const {
+      name,
+      saint,
+      description,
+      start_point,
+      destination,
+      current_stage,
+      next_stop,
+      latitude,
+      longitude,
+      assigned_operator_id,
+    } = req.body;
+
+    const client = getSupabaseClient();
+    const payload = {
+      name: name || 'Sant Dnyaneshwar Maharaj Palkhi',
+      current_stage: current_stage || 'Alandi Departure',
+      next_stop: next_stop || 'Pune Stay',
+      latitude: latitude !== undefined ? parseFloat(latitude) : 18.6772,
+      longitude: longitude !== undefined ? parseFloat(longitude) : 73.8967,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (assigned_operator_id) {
+      payload.last_updated_by = assigned_operator_id;
+    }
+
+    const { data, error } = await client
+      .from('palkhi_tracking')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    publishedStateMap.set(data.id, false); // Default: Unpublished
+
+    const response = {
+      ...data,
+      saint: saint || 'Sant Dnyaneshwar Maharaj',
+      start_point: start_point || 'Alandi',
+      destination: destination || 'Pandharpur',
+      status: 'ACTIVE',
+      is_published: false,
+      assigned_operator_id: assigned_operator_id || data.last_updated_by || null,
+    };
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'CREATE_PALKHI', 'PALKHI', data.id);
+    res.status(201).json(response);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updatePalkhi(req, res, next) {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+    const client = getSupabaseClient();
+
+    const updates = {
+      updated_at: new Date().toISOString(),
+    };
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.current_stage !== undefined) updates.current_stage = body.current_stage;
+    if (body.next_stop !== undefined) updates.next_stop = body.next_stop;
+    if (body.latitude !== undefined) updates.latitude = parseFloat(body.latitude);
+    if (body.longitude !== undefined) updates.longitude = parseFloat(body.longitude);
+    if (body.assigned_operator_id !== undefined) updates.last_updated_by = body.assigned_operator_id;
+
+    const { data, error } = await client
+      .from('palkhi_tracking')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (body.is_published !== undefined) {
+      publishedStateMap.set(id, body.is_published === true);
+    }
+
+    const response = {
+      ...data,
+      is_published: body.is_published !== undefined ? body.is_published : (publishedStateMap.get(id) ?? true),
+      assigned_operator_id: body.assigned_operator_id !== undefined ? body.assigned_operator_id : (data.assigned_operator_id || data.last_updated_by),
+    };
+
+    const action = body.assigned_operator_id !== undefined 
+      ? (body.assigned_operator_id ? 'ASSIGN_PALKHI_OPERATOR' : 'REMOVE_PALKHI_OPERATOR') 
+      : 'UPDATE_PALKHI';
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, action, 'PALKHI', id);
+    res.json(response);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function publishPalkhi(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('palkhi_tracking')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      return res.status(404).json({ error: 'Palkhi entity not found' });
+    }
+
+    publishedStateMap.set(id, true);
+
+    try {
+      await client.from('palkhi_tracking').update({ is_published: true }).eq('id', id);
+    } catch (_) {}
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'PUBLISH_PALKHI', 'PALKHI', id);
+    res.json({ ...(data || {}), id, is_published: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function unpublishPalkhi(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('palkhi_tracking')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      return res.status(404).json({ error: 'Palkhi entity not found' });
+    }
+
+    publishedStateMap.set(id, false);
+
+    try {
+      await client.from('palkhi_tracking').update({ is_published: false }).eq('id', id);
+    } catch (_) {}
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'UNPUBLISH_PALKHI', 'PALKHI', id);
+    res.json({ ...(data || {}), id, is_published: false });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deletePalkhi(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { error } = await client
+      .from('palkhi_tracking')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'DELETE_PALKHI', 'PALKHI', id);
+    res.json({ message: 'Palkhi entity deleted successfully', id });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 
