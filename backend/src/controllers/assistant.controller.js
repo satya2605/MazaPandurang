@@ -32,10 +32,18 @@ export async function handleAssistantChat(req, res, next) {
       });
     }
 
+    // Default user location if omitted: Center of Saswad Wari Hub (18.3411, 74.0305)
+    const effectiveLocation = {
+      latitude: 18.3411,
+      longitude: 74.0305,
+      name: 'सासवड मध्यवर्ती केंद्र (Saswad Center)',
+      ...(userContext || {})
+    };
+
     // Build trusted platform context directly from Supabase DB
     const trustedContext = await buildTrustedAssistantContext({
       userId,
-      userLocation: userContext || {}
+      userLocation: effectiveLocation
     });
 
     // 1. Attempt LLM API completion (Grok / Groq / OpenAI)
@@ -67,6 +75,7 @@ export async function handleAssistantChat(req, res, next) {
         text: answer,
         language: 'mr',
         provider: llmRes.provider || 'llm',
+        actions: llmRes.actions || [],
         sources: ['palkhi', 'services', 'wari_route']
       });
     }

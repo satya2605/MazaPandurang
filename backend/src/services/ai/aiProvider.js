@@ -12,14 +12,38 @@ export class AIProvider {
  * Deterministic Development AI Provider (Runs locally without external API keys).
  * Grounds answers strictly in live context or safety disclaimers.
  */
+/**
+ * Haversine distance calculator in kilometers.
+ */
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return 999.9;
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return parseFloat((R * c).toFixed(1));
+}
+
+/**
+ * Deterministic Development AI Provider (Runs locally without external API keys).
+ * Grounds answers strictly in live context, location proximity, or safety disclaimers.
+ */
 export class DevAIProvider extends AIProvider {
   async generateResponse({ systemPrompt, message, context, intent }) {
     const query = message.toLowerCase().trim();
 
+    // Default User Location: Center of Saswad Wari Hub (18.3411, 74.0305)
+    const userLat = context.userLocation?.latitude ? parseFloat(context.userLocation.latitude) : 18.3411;
+    const userLng = context.userLocation?.longitude ? parseFloat(context.userLocation.longitude) : 74.0305;
+    const locationName = context.userLocation?.name || 'सासवड मध्यवर्ती केंद्र (Saswad Center)';
+
     // 1. Safety & Emergency Intents
-    if (intent === 'emergency' || query.includes('sos') || query.includes('emergency') || query.includes('accident') || query.includes('help me')) {
+    if (intent === 'emergency' || query.includes('sos') || query.includes('emergency') || query.includes('accident') || query.includes('help')) {
       return {
-        reply: "🚩 Emergency Alert! Please stay calm. If you or someone around you requires immediate medical, police, or rescue assistance, tap the 'Send SOS' button below immediately to alert local authorities and emergency teams.",
+        reply: "🚩 आपत्कालीन इशारा (Emergency Alert)! शांत रहा. तातडीने वैद्यकीय किंवा बचाव मदतीची गरज असल्यास, खालील 'Send SOS' किंवा 'वैद्यकीय मदत' बटणावर क्लीक करा.",
         intent: 'emergency',
         actions: [
           { type: 'emergency', label: '🚨 Send Emergency SOS', targetRoute: '/help' },
@@ -29,9 +53,9 @@ export class DevAIProvider extends AIProvider {
       };
     }
 
-    if (query.includes('missing') || query.includes('lost person') || query.includes('lost child')) {
+    if (query.includes('missing') || query.includes('lost') || query.includes('हरवलेले')) {
       return {
-        reply: "If a pilgrim is missing or lost, you can view official missing person alerts or report a new case through the Lost & Found portal below.",
+        reply: "वारीमध्ये कोणतीही व्यक्ती हरवल्यास किंवा सापडल्यास, आपण खालील पोर्टलवरून अधिकृत माहिती पाहू शकता किंवा नवीन तक्रार नोंदवू शकता.",
         intent: 'lost_person',
         actions: [
           { type: 'lost_person', label: '🔍 View Missing Person Reports', targetRoute: '/help' }
@@ -40,123 +64,120 @@ export class DevAIProvider extends AIProvider {
       };
     }
 
-    // 2. Live Palkhi Location Intent
-    if (intent === 'palkhi' || query.includes('palkhi') || query.includes('where is the palkhi') || query.includes('palki')) {
-      if (context.palkhi) {
-        const p = context.palkhi;
-        return {
-          reply: `🚩 The ${p.name} is currently at ${p.currentStage}. Next upcoming stop is ${p.nextStop}. (Updated: ${p.lastUpdated ? p.lastUpdated.substring(11, 16) : 'Live'})`,
-          intent: 'palkhi_location',
-          actions: [
-            { type: 'palkhi', label: '📍 Track Palkhi on Map', targetRoute: '/palkhi' }
-          ],
-          sources: ['palkhi_tracking']
-        };
-      } else {
-        return {
-          reply: "I couldn't retrieve the latest Wari information right now. Please check back shortly.",
-          intent: 'palkhi_location',
-          actions: [{ type: 'palkhi', label: '📍 Open Wari Map', targetRoute: '/map' }],
-          sources: ['palkhi_tracking']
-        };
-      }
-    }
+    // 2. Service Location Intent (Water, Medical, Food, Toilet/Sanitation, Shelter, Police)
+    const isWater = query.includes('water') || query.includes('पाणी') || query.includes('पानी') || query.includes('जल');
+    const isMedical = query.includes('medical') || query.includes('doctor') || query.includes('hospital') || query.includes('वैद्यकीय') || query.includes('दवाखाना');
+    const isFood = query.includes('food') || query.includes('annachhatra') || query.includes('अन्नछत्र') || query.includes('जेवण') || query.includes('महाप्रसाद');
+    const isToilet = query.includes('toilet') || query.includes('sanitation') || query.includes('swachh') || query.includes('स्वच्छता') || query.includes('टॉयलेट');
+    const isShelter = query.includes('shelter') || query.includes('rest') || query.includes('विश्राम') || query.includes('मुक्काम') || query.includes('निवास');
+    const isPolice = query.includes('police') || query.includes('पोलीस') || query.includes('सुरक्षा');
 
-    // 3. Wari Route Stages Intent
-    if (intent === 'route' || query.includes('route') || query.includes('next stop') || query.includes('stage')) {
-      if (context.nextStage) {
-        return {
-          reply: `The current route procession stage is ${context.currentStage?.stageName || 'Saswad Stay'}. The next upcoming stage is ${context.nextStage.stageName}.`,
-          intent: 'wari_route',
-          actions: [
-            { type: 'route', label: '🗺️ View Full Wari Route', targetRoute: '/map' }
-          ],
-          sources: ['wari_route']
-        };
-      }
-      return {
-        reply: "The Wari procession spans from Alandi/Dehu through Pune, Saswad, Jejuri, Lonand, Phaltan to Pandharpur Dham.",
-        intent: 'wari_route',
-        actions: [{ type: 'route', label: '🗺️ View Wari Route', targetRoute: '/map' }],
-        sources: ['wari_route']
-      };
-    }
+    if (isWater || isMedical || isFood || isToilet || isShelter || isPolice) {
+      let filterCategory = 'water';
+      let categoryLabel = 'पिण्याचे पाणी केंद्र (Drinking Water)';
+      if (isMedical) { filterCategory = 'medical'; categoryLabel = 'वैद्यकीय केंद्र (Medical Camp)'; }
+      else if (isFood) { filterCategory = 'food'; categoryLabel = 'अन्नछत्र (Annachhatra / Food)'; }
+      else if (isToilet) { filterCategory = 'toilet'; categoryLabel = 'स्वच्छता गृह (Sanitation / Toilet)'; }
+      else if (isShelter) { filterCategory = 'shelter'; categoryLabel = 'विश्राम धाम (Shelter)'; }
+      else if (isPolice) { filterCategory = 'police'; categoryLabel = 'पोलीस मदत कक्ष (Police Booth)'; }
 
-    // 4. Medical Services Intent
-    if (query.includes('medical') || query.includes('doctor') || query.includes('hospital') || query.includes('ambulance') || query.includes('first aid')) {
-      const medical = context.services?.filter(s => s.category?.toLowerCase() === 'medical') || [];
-      if (medical.length > 0) {
-        const first = medical[0];
+      const allServices = context.services || [];
+      const categoryServices = allServices.filter(s => (s.category || '').toLowerCase() === filterCategory);
+      const matchedServices = categoryServices.length > 0 ? categoryServices : allServices;
+
+      if (matchedServices.length > 0) {
+        // Calculate distance from Saswad Center for each service & sort by nearest distance
+        const sortedWithDist = matchedServices.map(s => {
+          const sLat = s.latitude ? parseFloat(s.latitude) : 18.3411;
+          const sLng = s.longitude ? parseFloat(s.longitude) : 74.0305;
+          const distKm = getDistanceKm(userLat, userLng, sLat, sLng);
+          return { ...s, sLat, sLng, distKm };
+        }).sort((a, b) => a.distKm - b.distKm);
+
+        const nearest = sortedWithDist[0];
+
         return {
-          reply: `Found ${medical.length} verified medical facilities. Nearest: ${first.name} at ${first.address} (${first.contactPhone || 'Open 24/7'}).`,
-          intent: 'medical_service',
+          reply: `राम कृष्ण हरी! 🚩 ${locationName} पासून सर्वात जवळील ${categoryLabel}:\n\n📍 "${nearest.name}"\n• अंतर: ${nearest.distKm} किमी (${nearest.address})\n• स्थिती: ${nearest.availability_status || nearest.availabilityStatus || 'Available'}\n\nथेट मार्ग शोधण्यासाठी खालील बटणावर क्लिक करा.`,
+          intent: `${filterCategory}_service`,
           actions: [
-            { type: 'service', id: first.id, label: '🏥 Open Medical Camps', targetRoute: '/services' }
+            {
+              type: 'directions',
+              id: nearest.id,
+              label: `🧭 Start Navigation (${nearest.name})`,
+              targetRoute: `/map?lat=${nearest.sLat}&lng=${nearest.sLng}&title=${encodeURIComponent(nearest.name)}`,
+              latitude: nearest.sLat,
+              longitude: nearest.sLng,
+              title: nearest.name
+            },
+            {
+              type: 'service',
+              label: `📋 सर्व ${categoryLabel} यादी`,
+              targetRoute: '/services'
+            }
           ],
           sources: ['public_services']
         };
       }
+    }
+
+    // 3. Live Palkhi Location Intent
+    if (intent === 'palkhi' || query.includes('palkhi') || query.includes('palki') || query.includes('पालखी')) {
+      if (context.palkhis && context.palkhis.length > 0) {
+        const p = context.palkhis[0];
+        const pLat = p.latitude ? parseFloat(p.latitude) : 18.3411;
+        const pLng = p.longitude ? parseFloat(p.longitude) : 74.0305;
+        const distKm = getDistanceKm(userLat, userLng, pLat, pLng);
+
+        return {
+          reply: `राम कृष्ण हरी! 🚩 ${p.name} सध्या ${p.current_stage || p.currentStage || 'सासवड मुक्काम (Saswad Stay)'} येथे आहे. पुढील टप्पा: ${p.next_stop || p.nextStop || 'जेजुरी (Jejuri)'}.\n• ${locationName} पासून अंतर: ${distKm} किमी.`,
+          intent: 'palkhi_location',
+          actions: [
+            {
+              type: 'directions',
+              id: p.id,
+              label: `🧭 Start Navigation to Palkhi (${distKm} km)`,
+              targetRoute: `/map?lat=${pLat}&lng=${pLng}&title=${encodeURIComponent(p.name)}`,
+              latitude: pLat,
+              longitude: pLng,
+              title: p.name
+            },
+            { type: 'palkhi', label: '📍 Track Palkhi on Map', targetRoute: '/palkhi' }
+          ],
+          sources: ['palkhi_tracking']
+        };
+      }
+    }
+
+    // 4. Wari Route Stages Intent
+    if (intent === 'route' || query.includes('route') || query.includes('next stop') || query.includes('stage') || query.includes('मार्ग')) {
       return {
-        reply: "Verified medical camps with 24/7 doctors and ambulances are available along the Wari route.",
-        intent: 'medical_service',
-        actions: [{ type: 'service', label: '🏥 View All Medical Camps', targetRoute: '/services' }],
-        sources: ['public_services']
+        reply: "राम कृष्ण हरी! 🚩 देहू/आळंदी ➔ पुणे ➔ सासवड ➔ जेजुरी ➔ लोणंद ➔ फलटण ➔ पंढरपूर हा अधिकृत वारी मार्ग आहे. सासवड हे पालखीचे मुख्य मुक्कामाचे ठिकाण आहे.",
+        intent: 'wari_route',
+        actions: [{ type: 'route', label: '🗺️ View Full Wari Route Map', targetRoute: '/map' }],
+        sources: ['wari_route']
       };
     }
 
-    // 5. Drinking Water & Sanitation Intent
-    if (query.includes('water') || query.includes('toilet') || query.includes('sanitation') || query.includes('food') || query.includes('shelter')) {
-      return {
-        reply: "Clean drinking water, Annachhatra (food distribution), restrooms, and shelter tents are set up by verified NGOs along the route.",
-        intent: 'public_service',
-        actions: [
-          { type: 'service', label: '💧 View Water & Food Points', targetRoute: '/services' }
-        ],
-        sources: ['public_services']
-      };
-    }
-
-    // 6. Dindi Intent
-    if (intent === 'dindi' || query.includes('dindi')) {
+    // 5. Dindi Intent
+    if (intent === 'dindi' || query.includes('dindi') || query.includes('दिंडी')) {
       if (context.dindis && context.dindis.length > 0) {
-        const count = context.dindis.length;
         const sample = context.dindis[0];
         return {
-          reply: `There are ${count} active registered Dindis. Example: ${sample.dindi_number} — ${sample.name} led by ${sample.leader_name || 'Leader'}.`,
+          reply: `राम कृष्ण हरी! 🚩 सासवड येथे ${context.dindis.length} नोंदणीकृत दिंड्या सध्या कार्यरत आहेत. उदा. ${sample.name} (${sample.member_count || sample.memberCount || 50} वारकरी).`,
           intent: 'dindi_info',
-          actions: [
-            { type: 'dindi', id: sample.id, label: '🚩 View Dindis Directory', targetRoute: '/map' }
-          ],
+          actions: [{ type: 'dindi', label: '🚩 Find Nearby Dindis', targetRoute: '/map' }],
           sources: ['dindis_registry']
         };
       }
-      return {
-        reply: "Active Dindi troupes accompany the Palkhi with continuous Bhajan and Kirtan.",
-        intent: 'dindi_info',
-        actions: [{ type: 'dindi', label: '🚩 Find Nearby Dindis', targetRoute: '/map' }],
-        sources: ['dindis_registry']
-      };
     }
 
-    // 7. Devotional / Culture Knowledge
-    if (query.includes('pandurang') || query.includes('vitthal') || query.includes('wari') || query.includes('tradition') || query.includes('tilak')) {
-      return {
-        reply: "Ram Krishna Hari! 🚩 The Pandharpur Wari is a 800-year-old pilgrimage where lakhs of Varkaris walk to Pandharpur Dham to meet Lord Vitthal. The Tilak symbolizes devotion, equality, and surrender.",
-        intent: 'general_knowledge',
-        actions: [
-          { type: 'bhakti', label: '🎵 Listen to Abhang & Bhakti Media', targetRoute: '/bhakti' }
-        ],
-        sources: ['wari_tradition_knowledge']
-      };
-    }
-
-    // Default Fallback Response
+    // Default Fallback Response Grounded on Saswad Hub
     return {
-      reply: "Ram Krishna Hari! I am Tilak, your Wari assistant. I can help you locate the Palkhi, find medical camps, discover water points, track Dindis, or navigate emergency services.",
+      reply: "राम कृष्ण हरी! 🚩 मी तिलक, आपला वारी AI मार्गदर्शक आहे. सासवड मध्यवर्ती केंद्रावरून पिण्याचे पाणी, वैद्यकीय मदत, पालखी स्थान किंवा अन्नछत्राची माहिती आणि नेव्हिगेशन मिळवण्यासाठी विचारू शकता.",
       intent: 'general_assistance',
       actions: [
-        { type: 'palkhi', label: '📍 Track Palkhi', targetRoute: '/palkhi' },
-        { type: 'service', label: '🏥 Find Services', targetRoute: '/services' }
+        { type: 'service', label: '💧 Find Nearest Water & Services', targetRoute: '/services' },
+        { type: 'palkhi', label: '📍 Track Palkhi on Map', targetRoute: '/palkhi' }
       ],
       sources: ['tilak_knowledge']
     };
