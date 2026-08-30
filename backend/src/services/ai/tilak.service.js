@@ -90,9 +90,7 @@ async function fetchLiveWariContext({ latitude, longitude }) {
     const { data: servicesData } = await client
       .from('services')
       .select('id, name, category, address, contact_phone, availability_status, latitude, longitude')
-      .eq('is_verified', true)
-      .eq('is_active', true)
-      .limit(10);
+      .limit(30);
 
     if (servicesData) {
       context.services = servicesData.map(s => ({
@@ -102,6 +100,8 @@ async function fetchLiveWariContext({ latitude, longitude }) {
         address: s.address,
         contactPhone: s.contact_phone,
         availabilityStatus: s.availability_status,
+        latitude: s.latitude ? parseFloat(s.latitude) : null,
+        longitude: s.longitude ? parseFloat(s.longitude) : null,
       }));
     }
 
@@ -110,7 +110,7 @@ async function fetchLiveWariContext({ latitude, longitude }) {
       .from('dindis')
       .select('id, dindi_number, name, leader_name, member_count, current_location_name')
       .eq('status', 'Active')
-      .limit(5);
+      .limit(10);
 
     if (dindisData) {
       context.dindis = dindisData;
@@ -122,7 +122,7 @@ async function fetchLiveWariContext({ latitude, longitude }) {
       .select('id, person_name, age, gender, last_seen_location')
       .eq('is_approved_by_admin', true)
       .eq('status', 'missing')
-      .limit(3);
+      .limit(5);
 
     if (lostPersonsData) {
       context.lostPersons = lostPersonsData;
@@ -141,7 +141,10 @@ function detectIntent(message) {
   const msg = message.toLowerCase();
   if (msg.includes('sos') || msg.includes('emergency') || msg.includes('accident') || msg.includes('help')) return 'emergency';
   if (msg.includes('palkhi') || msg.includes('palki') || msg.includes('where is')) return 'palkhi';
-  if (msg.includes('medical') || msg.includes('doctor') || msg.includes('hospital')) return 'medical';
+  if (msg.includes('medical') || msg.includes('doctor') || msg.includes('hospital') || msg.includes('वैद्यकीय')) return 'medical';
+  if (msg.includes('water') || msg.includes('पानी') || msg.includes('पाणी') || msg.includes('जल')) return 'water';
+  if (msg.includes('food') || msg.includes('annachhatra') || msg.includes('अन्नछत्र') || msg.includes('जेवण')) return 'food';
+  if (msg.includes('toilet') || msg.includes('sanitation') || msg.includes('स्वच्छता')) return 'toilet';
   if (msg.includes('dindi')) return 'dindi';
   if (msg.includes('route') || msg.includes('stop') || msg.includes('stage')) return 'route';
   if (msg.includes('lost') || msg.includes('missing')) return 'lost_person';
@@ -173,11 +176,72 @@ export async function processTilakChat({ message, userLocation, userId }) {
     intent
   });
 
+  let actions = Array.isArray(response.actions) ? [...response.actions] : [];
+
+  // Automatically enrich response with directions actions for relevant services if missing
+  const msgLower = message.toLowerCase();
+  const searchTerms = [];
+  if (intent === 'water' || msgLower.includes('water') || msgLower.includes('पाणी') || msgLower.includes('पानी') || msgLower.includes('जल')) {
+    searchTerms.push('Water', 'Jal', 'पाणी', 'जल');
+  } else if (intent === 'medical' || msgLower.includes('medical') || msgLower.includes('hospital') || msgLower.includes('वैद्यकीय')) {
+    searchTerms.push('Medical', 'Hospital', 'वैद्यकीय', 'doctor');
+  } else if (intent === 'food' || msgLower.includes('food') || msgLower.includes('annachhatra') || msgLower.includes('अन्नछत्र')) {
+    searchTerms.push('Food', 'Annachhatra', 'अन्नछत्र', 'भोजन');
+  } else if (intent === 'toilet' || msgLower.includes('toilet') || msgLower.includes('sanitation') || msgLower.includes('स्वच्छता')) {
+    searchTerms.push('Toilet', 'Sanitation', 'स्वच्छता');
+  }
+
+  if (searchTerms.length > 0 && context.services.length > 0) {
+    const matchingServices = context.services.filter(s => {
+      const cat = (s.category || '').toLowerCase();
+      const name = (s.name || '').toLowerCase();
+      return searchTerms.some(term => cat.includes(term.toLowerCase()) || name.includes(term.toLowerCase()));
+    });
+
+    const targetServices = matchingServices.length > 0 ? matchingServices : context.services;
+    for (const s of targetServices.slice(0, 2)) {
+      if (s.latitude && s.longitude) {
+        const hasExisting = actions.some(a => a.type === 'directions' && (a.id === s.id || a.title === s.name));
+        if (!hasExisting) {
+          actions.push({
+            type: 'directions',
+            id: s.id,
+            label: `🧭 मार्गदर्शक दिशा: ${s.name}`,
+            targetRoute: '/map',
+            latitude: s.latitude,
+            longitude: s.longitude,
+            title: s.name,
+          });
+        }
+      }
+    }
+  }
+
+  // Fallback fallback if reply was generic
+  let reply = response.reply;
+  if (!reply || reply.includes('उपलब्ध नाही') || reply.includes('couldn\'t retrieve')) {
+    if (searchTerms.length > 0 && context.services.length > 0) {
+      const matchingServices = context.services.filter(s => {
+        const cat = (s.category || '').toLowerCase();
+        const name = (s.name || '').toLowerCase();
+        return searchTerms.some(term => cat.includes(term.toLowerCase()) || name.includes(term.toLowerCase()));
+      });
+
+      if (matchingServices.length > 0) {
+        const s = matchingServices[0];
+        reply = `राम कृष्ण हरी! 🚩 वारी मार्गावर ${s.name} (${s.address}) उपलब्ध आहे. स्थिती: ${s.availabilityStatus}. थेट मार्ग शोधण्यासाठी खालील बटणावर क्लिक करा.`;
+      } else {
+        const s = context.services[0];
+        reply = `राम कृष्ण हरी! 🚩 वारी मार्गावर ${s.name} (${s.address}) उपलब्ध आहे. थेट मार्ग शोधण्यासाठी खालील बटणावर क्लिक करा.`;
+      }
+    }
+  }
+
   return {
     success: true,
-    reply: response.reply,
+    reply,
     intent: response.intent || intent,
-    actions: response.actions || [],
-    sources: response.sources || ['tilak_ai']
+    actions,
+    sources: response.sources || ['services', 'palkhi_tracking']
   };
 }

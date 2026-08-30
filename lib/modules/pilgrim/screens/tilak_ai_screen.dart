@@ -371,19 +371,30 @@ class _ChatBubble extends StatelessWidget {
                 runSpacing: 6,
                 children: message.actions.map((act) {
                   final isEmergency = act.type == 'emergency';
+                  final isDirections = act.type == 'directions' || act.latitude != null;
                   return ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isEmergency ? Colors.red : AppColors.primaryLight,
+                      backgroundColor: isEmergency
+                          ? Colors.red.shade900
+                          : (isDirections ? Colors.teal.shade700 : AppColors.primary),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(0, 36),
                     ),
                     onPressed: () {
-                      final target = act.targetRoute ?? message.targetRoute ?? '/map';
-                      if (onActionTap != null) {
-                        onActionTap!(target);
+                      if (act.latitude != null && act.longitude != null) {
+                        final title = Uri.encodeComponent(act.title ?? act.label);
+                        onActionTap?.call('/map?lat=${act.latitude}&lng=${act.longitude}&title=$title');
+                      } else {
+                        final target = act.targetRoute ?? message.targetRoute ?? '/map';
+                        onActionTap?.call(target);
                       }
                     },
-                    icon: Icon(isEmergency ? Icons.warning_amber : Icons.explore, size: 16),
+                    icon: Icon(
+                      isEmergency
+                          ? Icons.warning_amber_rounded
+                          : (isDirections ? Icons.near_me_rounded : Icons.explore_rounded),
+                      size: 16,
+                    ),
                     label: Text(act.label),
                   );
                 }).toList(),
@@ -394,7 +405,8 @@ class _ChatBubble extends StatelessWidget {
               const SizedBox(height: 10),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryLight,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(0, 36),
                 ),
                 onPressed: () {
@@ -402,7 +414,7 @@ class _ChatBubble extends StatelessWidget {
                     onActionTap!(message.targetRoute!);
                   }
                 },
-                icon: const Icon(Icons.explore, size: 16),
+                icon: const Icon(Icons.explore_rounded, size: 16),
                 label: Text(message.suggestedActionText!),
               ),
             ],

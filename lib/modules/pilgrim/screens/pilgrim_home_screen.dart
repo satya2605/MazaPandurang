@@ -120,7 +120,9 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
           repository: _repository,
           onNavigateAction: (route) {
             Navigator.pop(context);
-            if (route == '/palkhi') {
+            if (route == '/map' || route.startsWith('/map')) {
+              setState(() => _currentNavIndex = 0);
+            } else if (route == '/palkhi') {
               setState(() => _currentNavIndex = 1);
             } else if (route == '/services') {
               setState(() => _currentNavIndex = 2);

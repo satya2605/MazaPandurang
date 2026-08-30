@@ -65,9 +65,7 @@ export async function buildTrustedAssistantContext({ userId, userLocation = {} }
     const { data: serviceRows } = await client
       .from('services')
       .select('id, name, category, address, contact_phone, availability_status, latitude, longitude')
-      .eq('is_verified', true)
-      .eq('is_active', true)
-      .limit(15);
+      .limit(30);
 
     if (Array.isArray(serviceRows)) {
       context.services = serviceRows.map(s => ({
@@ -76,7 +74,9 @@ export async function buildTrustedAssistantContext({ userId, userLocation = {} }
         category: s.category,
         address: s.address,
         contact_phone: s.contact_phone,
-        availability_status: s.availability_status
+        availability_status: s.availability_status,
+        latitude: s.latitude ? parseFloat(s.latitude) : null,
+        longitude: s.longitude ? parseFloat(s.longitude) : null,
       }));
     }
 

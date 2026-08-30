@@ -287,12 +287,18 @@ class TilakAction {
   final String? id;
   final String label;
   final String? targetRoute;
+  final double? latitude;
+  final double? longitude;
+  final String? title;
 
   const TilakAction({
     required this.type,
     this.id,
     required this.label,
     this.targetRoute,
+    this.latitude,
+    this.longitude,
+    this.title,
   });
 
   factory TilakAction.fromJson(Map<String, dynamic> json) {
@@ -301,6 +307,9 @@ class TilakAction {
       id: json['id']?.toString(),
       label: json['label']?.toString() ?? json['action_label']?.toString() ?? 'View Details',
       targetRoute: json['targetRoute']?.toString() ?? json['target_route']?.toString(),
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
+      title: json['title']?.toString(),
     );
   }
 }
