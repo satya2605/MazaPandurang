@@ -8,7 +8,7 @@ import { config } from '../../config/env.js';
 const DEV_FALLBACK_AUDIO = "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
 
 /**
- * Perform Speech-To-Text transcription using Sarvam AI.
+ * Perform Speech-To-Text transcription using Sarvam AI (saaras:v3).
  * Primary language: Marathi ('mr-IN').
  */
 export async function transcribeSarvamSTT({ audioBuffer, mimeType = 'audio/wav', languageCode = 'mr-IN', timeoutMs = 12000 }) {
@@ -27,11 +27,14 @@ export async function transcribeSarvamSTT({ audioBuffer, mimeType = 'audio/wav',
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const sttModel = process.env.SARVAM_STT_MODEL || 'saaras:v3';
     const formData = new FormData();
     const blob = new Blob([audioBuffer], { type: mimeType });
     formData.append('file', blob, 'audio.wav');
     formData.append('language_code', languageCode);
-    formData.append('model', 'saaras:v1');
+    formData.append('model', sttModel);
+
+    console.log(`[SarvamSTT] Requesting STT transcription (model: ${sttModel}, language: ${languageCode})`);
 
     const res = await fetch('https://api.sarvam.ai/speech-to-text', {
       method: 'POST',
@@ -45,7 +48,8 @@ export async function transcribeSarvamSTT({ audioBuffer, mimeType = 'audio/wav',
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      console.warn(`[SarvamSTT] API returned HTTP ${res.status}. Falling back to dev STT.`);
+      const errText = await res.text().catch(() => '');
+      console.warn(`[SarvamSTT] API returned HTTP ${res.status}: ${errText.substring(0, 150)}. Falling back to dev STT.`);
       return {
         success: true,
         text: "ज्ञानेश्वर माऊलींची पालखी सध्या कुठे आहे?",
@@ -55,9 +59,12 @@ export async function transcribeSarvamSTT({ audioBuffer, mimeType = 'audio/wav',
     }
 
     const data = await res.json();
+    const transcript = data.transcript || data.text || 'ज्ञानेश्वर माऊलींची पालखी सध्या कुठे आहे?';
+    console.log(`[SarvamSTT] Successfully transcribed audio: "${transcript}"`);
+
     return {
       success: true,
-      text: data.transcript || data.text || 'ज्ञानेश्वर माऊलींची पालखी सध्या कुठे आहे?',
+      text: transcript,
       language: data.language_code || languageCode,
       provider: 'sarvam'
     };
