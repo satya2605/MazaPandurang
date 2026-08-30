@@ -24,4 +24,6 @@ abstract class PilgrimRepository {
   Future<List<EmergencyRequest>> getEmergencyRequests();
   Future<List<TrafficAlert>> getTrafficAlerts();
   Future<TilakChatMessage> queryTilakAI(String prompt);
+  Future<String?> transcribeAudio(List<int> audioBytes);
+  Future<String?> synthesizeTTS(String text);
 }

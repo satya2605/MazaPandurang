@@ -66,4 +66,31 @@ class ApiClient {
     final url = Uri.parse('$baseUrl$endpoint');
     return await http.delete(url, headers: _buildHeaders(headers));
   }
+
+  Future<http.Response> postMultipart(
+    String endpoint,
+    List<int> fileBytes, {
+    String fieldName = 'file',
+    String filename = 'audio.wav',
+    Map<String, String>? fields,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final req = http.MultipartRequest('POST', uri);
+    final headers = _buildHeaders();
+    headers.remove('Content-Type'); // Allow MultipartRequest boundary
+    req.headers.addAll(headers);
+
+    if (fields != null) {
+      req.fields.addAll(fields);
+    }
+    req.files.add(
+      http.MultipartFile.fromBytes(
+        fieldName,
+        fileBytes,
+        filename: filename,
+      ),
+    );
+    final streamedRes = await req.send();
+    return await http.Response.fromStream(streamedRes);
+  }
 }

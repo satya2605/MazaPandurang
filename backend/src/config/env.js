@@ -16,6 +16,8 @@ export const config = {
   supabaseUrl: process.env.SUPABASE_URL || '',
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  grokApiKey: process.env.GROK_API_KEY || '',
+  sarvamApiKey: process.env.SARVAM_API_KEY || '',
   storageBuckets: {
     lostPerson: process.env.SUPABASE_STORAGE_LOST_PERSON_BUCKET || 'lost-person-images',
     services: process.env.SUPABASE_STORAGE_SERVICE_BUCKET || 'service-images',

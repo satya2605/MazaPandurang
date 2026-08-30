@@ -432,7 +432,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
   Future<TilakChatMessage> queryTilakAI(String prompt) async {
     try {
       final response = await _apiClient.post(
-        '/ai/tilak/chat',
+        '/assistant/chat',
         body: {
           'message': prompt,
           'context': {
@@ -440,15 +440,56 @@ class ApiPilgrimRepository implements PilgrimRepository {
             'longitude': 74.0305,
           },
         },
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = jsonDecode(response.body);
         return TilakChatMessage.fromJson(json);
       }
     } catch (e) {
-      debugPrint('[MOCK] /api/ai/tilak/chat fallback: $e');
+      debugPrint('[MOCK] /api/assistant/chat fallback: $e');
     }
     return await _fallback.queryTilakAI(prompt);
+  }
+
+  @override
+  Future<String?> transcribeAudio(List<int> audioBytes) async {
+    try {
+      final response = await _apiClient.postMultipart(
+        '/assistant/stt',
+        audioBytes,
+        filename: 'recorded_voice.wav',
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        return json['text'] as String?;
+      }
+    } catch (e) {
+      debugPrint('[MOCK] /api/assistant/stt fallback: $e');
+    }
+    return await _fallback.transcribeAudio(audioBytes);
+  }
+
+  @override
+  Future<String?> synthesizeTTS(String text) async {
+    try {
+      final response = await _apiClient.post(
+        '/assistant/tts',
+        body: {
+          'text': text,
+          'languageCode': 'mr-IN',
+          'speaker': 'meera',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        return json['audio'] as String?;
+      }
+    } catch (e) {
+      debugPrint('[MOCK] /api/assistant/tts fallback: $e');
+    }
+    return await _fallback.synthesizeTTS(text);
   }
 }

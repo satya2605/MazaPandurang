@@ -100,8 +100,8 @@ void main() {
       await tester.tap(find.text('Tilak AI'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Tilak AI Assistant'), findsOneWidget);
-      expect(find.textContaining('Where is the Palkhi right now?'), findsOneWidget);
+      expect(find.textContaining('तिलक वारी AI'), findsOneWidget);
+      expect(find.textContaining('पालखी'), findsWidgets);
     });
   });
 }

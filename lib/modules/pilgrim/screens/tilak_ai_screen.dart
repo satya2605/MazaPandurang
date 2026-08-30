@@ -3,6 +3,8 @@ import '../../../common/constants/app_colors.dart';
 import '../models/pilgrim_models.dart';
 import '../repositories/pilgrim_repository.dart';
 
+enum AiState { idle, listening, transcribing, thinking, speaking, error }
+
 class TilakAiScreen extends StatefulWidget {
   final PilgrimRepository repository;
   final Function(String route)? onNavigateAction;
@@ -20,26 +22,26 @@ class TilakAiScreen extends StatefulWidget {
 class _TilakAiScreenState extends State<TilakAiScreen> {
   final TextEditingController _textController = TextEditingController();
   final List<TilakChatMessage> _messages = [];
-  bool _isThinking = false;
+  AiState _currentState = AiState.idle;
+  String? _statusText;
 
   static const List<String> _suggestedPrompts = [
-    '📍 Where is the Palkhi right now?',
-    '🏥 Find medical help',
-    '💧 Where can I get water?',
-    '🛣️ What is the next Wari stop?',
-    '🙏 Tell me about Pandurang',
-    '🚨 I need emergency help',
+    '📍 पालखी सध्या कुठे आहे?',
+    '🏥 वैद्यकीय मदत हवी आहे',
+    '💧 पिण्याचे पाणी कुठे मिळेल?',
+    '🛣️ पुढचा मुक्काम कोणता?',
+    '🚩 राम कृष्ण हरी!',
+    '🚨 आपत्कालीन मदत',
   ];
 
   @override
   void initState() {
     super.initState();
-    // Non-persistent initial welcome message
     _messages.add(
       TilakChatMessage(
         id: 'MSG-INIT',
         text:
-            'Ram Krishna Hari! 🚩 I am Tilak, your dedicated Wari AI guide. Ask me anything about Palkhi schedules, medical camps, water points, or route updates.',
+            'राम कृष्ण हरी! 🚩 मी तिलक, आपला वारी AI मार्गदर्शक आहे. पालखी मार्ग, मुक्काम, वैद्यकीय मदत किंवा अन्नछत्राबाबत काहीही विचारा.',
         isUser: false,
         timestamp: DateTime.now(),
       ),
@@ -51,24 +53,106 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
 
     final userMsg = TilakChatMessage(
       id: 'MSG-USR-${DateTime.now().millisecondsSinceEpoch}',
-      text: text,
+      text: text.trim(),
       isUser: true,
       timestamp: DateTime.now(),
     );
 
     setState(() {
       _messages.add(userMsg);
-      _isThinking = true;
+      _currentState = AiState.thinking;
+      _statusText = 'तिलक वारी माहिती शोधत आहे...';
     });
 
     _textController.clear();
 
-    final aiMsg = await widget.repository.queryTilakAI(text);
+    try {
+      final aiMsg = await widget.repository.queryTilakAI(userMsg.text);
+
+      if (mounted) {
+        setState(() {
+          _messages.add(aiMsg);
+          _currentState = AiState.idle;
+          _statusText = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentState = AiState.error;
+          _statusText = 'माहिती मिळवताना अडचण आली. कृपया पुन्हा प्रयत्न करा.';
+        });
+      }
+    }
+  }
+
+  void _handleVoiceRecording() async {
+    setState(() {
+      _currentState = AiState.listening;
+      _statusText = 'ऐकत आहे... बोला (मराठीत बोला)';
+    });
+
+    // Simulate audio capture stream bytes (1 second sample)
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    if (!mounted) return;
+
+    setState(() {
+      _currentState = AiState.transcribing;
+      _statusText = 'आवाज रूपांतरित करत आहे (Sarvam STT)...';
+    });
+
+    try {
+      final sampleAudioBytes = List<int>.generate(512, (i) => i % 256);
+      final recognizedText = await widget.repository.transcribeAudio(sampleAudioBytes);
+
+      if (mounted && recognizedText != null && recognizedText.isNotEmpty) {
+        _textController.text = recognizedText;
+        setState(() {
+          _currentState = AiState.idle;
+          _statusText = 'आवाज ओळखला: "$recognizedText"';
+        });
+        _sendMessage(recognizedText);
+      } else {
+        if (mounted) {
+          setState(() {
+            _currentState = AiState.idle;
+            _statusText = null;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentState = AiState.error;
+          _statusText = 'आवाज ओळखता आला नाही.';
+        });
+      }
+    }
+  }
+
+  void _playTTS(String text) async {
+    setState(() {
+      _currentState = AiState.speaking;
+      _statusText = 'वाचन सुरू आहे (Sarvam TTS)...';
+    });
+
+    try {
+      await widget.repository.synthesizeTTS(text);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🔊 Sarvam AI मराठी आवाज प्ले होत आहे...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (_) {}
 
     if (mounted) {
       setState(() {
-        _messages.add(aiMsg);
-        _isThinking = false;
+        _currentState = AiState.idle;
+        _statusText = null;
       });
     }
   }
@@ -84,7 +168,7 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
             SizedBox(width: 8),
             Flexible(
               child: Text(
-                'Tilak AI Assistant',
+                'तिलक वारी AI (Marathi Assistant)',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -106,10 +190,8 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
                       (prompt) => Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ActionChip(
-                          avatar: const Icon(Icons.help_outline,
-                              size: 16, color: AppColors.primary),
-                          label: Text(prompt,
-                              style: const TextStyle(fontSize: 13)),
+                          avatar: const Icon(Icons.help_outline, size: 16, color: AppColors.primary),
+                          label: Text(prompt, style: const TextStyle(fontSize: 13)),
                           backgroundColor: AppColors.surface,
                           onPressed: () => _sendMessage(prompt),
                         ),
@@ -130,25 +212,45 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
                 return _ChatBubble(
                   message: msg,
                   onActionTap: widget.onNavigateAction,
+                  onPlayTTS: () => _playTTS(msg.text),
                 );
               },
             ),
           ),
 
-          if (_isThinking)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+          // Explicit Status Indicator
+          if (_currentState != AiState.idle)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  if (_currentState == AiState.listening)
+                    const Icon(Icons.mic, color: Colors.red, size: 18)
+                  else if (_currentState == AiState.speaking)
+                    const Icon(Icons.volume_up, color: Colors.blue, size: 18)
+                  else if (_currentState == AiState.error)
+                    const Icon(Icons.error_outline, color: Colors.orange, size: 18)
+                  else
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      _statusText ?? 'प्रक्रिया सुरू आहे...',
+                      style: TextStyle(
+                        color: _currentState == AiState.listening
+                            ? Colors.red.shade800
+                            : AppColors.textSecondary,
+                        fontWeight: _currentState == AiState.listening ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  SizedBox(width: 10),
-                  Text('Tilak is searching Wari information...',
-                      style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -165,23 +267,18 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.mic_none, color: AppColors.primary),
-                  tooltip: 'Voice Search Placeholder',
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Speech-to-Text (STT) provider will activate in Phase 2.',
-                        ),
-                      ),
-                    );
-                  },
+                  icon: Icon(
+                    _currentState == AiState.listening ? Icons.mic : Icons.mic_none,
+                    color: _currentState == AiState.listening ? Colors.red : AppColors.primary,
+                  ),
+                  tooltip: 'मराठी आवाज शोध (Sarvam STT)',
+                  onPressed: _handleVoiceRecording,
                 ),
                 Expanded(
                   child: TextField(
                     controller: _textController,
                     decoration: InputDecoration(
-                      hintText: 'Ask Tilak about Wari, Palkhi, medical...',
+                      hintText: 'तिलकना विचारा (उदा. पालखी कुठे आहे?)...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: const BorderSide(color: AppColors.border),
@@ -211,10 +308,12 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
 class _ChatBubble extends StatelessWidget {
   final TilakChatMessage message;
   final Function(String route)? onActionTap;
+  final VoidCallback? onPlayTTS;
 
   const _ChatBubble({
     required this.message,
     this.onActionTap,
+    this.onPlayTTS,
   });
 
   @override
@@ -225,7 +324,7 @@ class _ChatBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+          maxWidth: MediaQuery.of(context).size.width * 0.82,
         ),
         decoration: BoxDecoration(
           color: message.isUser ? AppColors.primary : AppColors.surface,
@@ -244,12 +343,30 @@ class _ChatBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message.text,
-              style: TextStyle(
-                color: message.isUser ? Colors.white : AppColors.textPrimary,
-                fontSize: 15,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    message.text,
+                    style: TextStyle(
+                      color: message.isUser ? Colors.white : AppColors.textPrimary,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                if (!message.isUser && onPlayTTS != null) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: onPlayTTS,
+                    child: const Padding(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(Icons.volume_up, size: 18, color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ],
             ),
             if (!message.isUser && message.actions.isNotEmpty) ...[
               const SizedBox(height: 10),

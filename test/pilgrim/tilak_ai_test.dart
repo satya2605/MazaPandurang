@@ -60,9 +60,9 @@ void main() {
         ),
       );
 
-      expect(find.text('Tilak AI Assistant'), findsOneWidget);
-      expect(find.textContaining('📍 Where is the Palkhi right now?'), findsOneWidget);
-      expect(find.textContaining('🚨 I need emergency help'), findsOneWidget);
+      expect(find.textContaining('तिलक वारी AI'), findsOneWidget);
+      expect(find.textContaining('📍 पालखी सध्या कुठे आहे?'), findsOneWidget);
+      expect(find.textContaining('🚨 आपत्कालीन मदत'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
     });
   });

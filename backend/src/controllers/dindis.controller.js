@@ -181,7 +181,7 @@ export async function createDindi(req, res, next) {
     const destination = req.body.destination || req.body.destination || 'Pandharpur';
     const currentHalt = req.body.currentHalt || req.body.current_halt || '';
     const roadStatus = req.body.roadStatus || req.body.road_status || 'Clear & Moving';
-    const joinCode = req.body.joinCode || req.body.join_code || `DND${Math.floor(100 + Math.random() * 900)}`;
+    const joinCode = req.body.joinCode || req.body.join_code || `DND${Math.floor(100 + Math.random() * 900)}${Date.now().toString().slice(-3)}`;
     const documentUrl = req.body.documentUrl || req.body.document_url || 'https://example.com/docs/dindi_registration_default.pdf';
     const leaderImageUrl = req.body.leaderImageUrl || req.body.leader_image_url || 'https://example.com/photos/leader_default.jpg';
 

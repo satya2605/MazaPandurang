@@ -552,5 +552,15 @@ class MockPilgrimRepository implements PilgrimRepository {
       ),
     ];
   }
+
+  @override
+  Future<String?> transcribeAudio(List<int> audioBytes) async {
+    return 'ज्ञानेश्वर माऊलींची पालखी सध्या कुठे आहे?';
+  }
+
+  @override
+  Future<String?> synthesizeTTS(String text) async {
+    return 'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  }
 }
 

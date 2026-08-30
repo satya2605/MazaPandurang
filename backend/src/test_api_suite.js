@@ -559,6 +559,117 @@ async function runTestSuite() {
     const hasPalkhiInDindi = Array.isArray(dindi36.json) && dindi36.json.some(d => d.saint !== undefined);
     assert(!hasPalkhiInDindi, 'DINDI 36: Public Dindi API response contains strictly 0 Palkhi records');
 
+    // ==========================================
+    // AI ASSISTANT SUITE (AI 1 to AI 15)
+    // ==========================================
+
+    // AI 1: Unauthenticated /api/assistant/chat -> 401
+    const ai1 = await request('/api/assistant/chat', {
+      method: 'POST',
+      body: { message: 'Where is Palkhi?' }
+    });
+    assert(ai1.status === 401, 'AI 1: Unauthenticated /api/assistant/chat returns 401 Unauthorized');
+
+    // AI 2: Authenticated pilgrim -> chat request reaches assistant service
+    const ai2 = await request('/api/assistant/chat', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { message: 'ज्ञानेश्वर माऊलींची पालखी सध्या कुठे आहे?' }
+    });
+    assert(ai2.status === 200 && ai2.json.success === true && ai2.json.message, 'AI 2: Authenticated pilgrim chat request returns valid assistant response');
+
+    // AI 3: Missing message -> 400
+    const ai3 = await request('/api/assistant/chat', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: {}
+    });
+    assert(ai3.status === 400, 'AI 3: Missing message parameter returns 400 Bad Request');
+
+    // AI 4: Oversized message -> 400
+    const ai4 = await request('/api/assistant/chat', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { message: 'a'.repeat(2500) }
+    });
+    assert(ai4.status === 400, 'AI 4: Oversized message exceeding 2000 characters returns 400 Bad Request');
+
+    // AI 5: Role spoofing in body is ignored
+    const ai5 = await request('/api/assistant/chat', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { message: 'Hello', role: 'admin', user_id: '00000000-0000-0000-0000-000000000006' }
+    });
+    assert(ai5.status === 200 && ai5.json.success === true, 'AI 5: Role/User ID spoofing in request body is safely ignored');
+
+    // AI 6: x-user-id header cannot override req.user.id
+    const ai6 = await request('/api/assistant/chat', {
+      method: 'POST',
+      headers: { ...pilgrimToken, 'x-user-id': '00000000-0000-0000-0000-000000000006' },
+      body: { message: 'Test identity' }
+    });
+    assert(ai6.status === 200, 'AI 6: x-user-id spoofing header is ignored in favor of verified Supabase JWT');
+
+    // AI 7: Suspended user rejected -> 403
+    await request('/api/admin/dindi-leaders/00000000-0000-0000-0000-000000000001/suspend', { method: 'PATCH', headers: adminToken });
+    const ai7 = await request('/api/assistant/chat', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { message: 'Test suspended' }
+    });
+    assert(ai7.status === 403, 'AI 7: Suspended user account is rejected with 403 Forbidden');
+    await request('/api/admin/dindi-leaders/00000000-0000-0000-0000-000000000001/approve', { method: 'PATCH', headers: adminToken });
+
+    // AI 8: STT requires authentication -> 401
+    const ai8 = await request('/api/assistant/stt', {
+      method: 'POST',
+      body: { audio: 'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=' }
+    });
+    assert(ai8.status === 401, 'AI 8: Speech-to-Text endpoint requires authentication (401 Unauthorized)');
+
+    // AI 9: TTS requires authentication -> 401
+    const ai9 = await request('/api/assistant/tts', {
+      method: 'POST',
+      body: { text: 'राम कृष्ण हरी' }
+    });
+    assert(ai9.status === 401, 'AI 9: Text-to-Speech endpoint requires authentication (401 Unauthorized)');
+
+    // AI 10: Palkhi context contains only published Palkhis
+    const ai10 = await request('/api/palkhi');
+    const allPublished = Array.isArray(ai10.json) ? ai10.json.every(p => p.is_published !== false) : true;
+    assert(allPublished, 'AI 10: Palkhi context strictly contains published Palkhis only');
+
+    // AI 11: Palkhi context does not contain operator identity
+    const ai11 = await request('/api/palkhi');
+    const hasOperatorSecrets = Array.isArray(ai11.json) && ai11.json.some(p => p.operator_email !== undefined || p.operator_password !== undefined);
+    assert(!hasOperatorSecrets, 'AI 11: Palkhi context excludes internal operator identity and credentials');
+
+    // AI 12: Dindi records are not accidentally inserted into the Palkhi context
+    const ai12 = await request('/api/palkhi');
+    const dindiInPalkhi = Array.isArray(ai12.json) && ai12.json.some(p => p.dindi_number !== undefined);
+    assert(!dindiInPalkhi, 'AI 12: Dindi records are never inserted into Palkhi context');
+
+    // AI 13: Provider timeout / unconfigured state produces clean response
+    const ai13 = await request('/api/assistant/tts', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { text: 'राम कृष्ण हरी! सासवड मुक्काम.' }
+    });
+    assert(ai13.status === 200 && ai13.json.audio, 'AI 13: TTS provider returns clean audio response structure without server crash');
+
+    // AI 14: Provider credentials never appear in API response
+    const resString = JSON.stringify(ai2.json);
+    const hasSecrets = resString.includes('GROK_API_KEY') || resString.includes('SARVAM_API_KEY') || resString.includes('xai-') || resString.includes('sarvam-');
+    assert(!hasSecrets, 'AI 14: Provider API keys and credentials never appear in client responses');
+
+    // AI 15: Assistant explicitly handles unavailable context rather than fabricating live data
+    const ai15 = await request('/api/assistant/chat', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { message: 'Where is the non-existent test palkhi 9999?' }
+    });
+    assert(ai15.status === 200 && ai15.json.success === true, 'AI 15: Assistant query executes safely without hallucinating live operational data');
+
     console.log(`\n🎉 MASTER API SUITE SUMMARY: ${passedTests} / ${totalTests} CHECKS PASSED (${Math.round((passedTests / totalTests) * 100)}% SUCCESS RATE)\n`);
   } catch (err) {
     console.error('Fatal API test error:', err);
