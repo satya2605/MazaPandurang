@@ -193,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.temple_hindu, color: AppColors.primary, size: 36),
@@ -210,13 +210,36 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: AppColors.primary,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
-                        _isSignUpMode ? 'Create a new pilgrim account' : 'Sign in to access your Wari dashboard',
+                        _isSignUpMode ? 'Create a new account' : 'Sign in to access your Wari dashboard',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        style: const TextStyle(fontSize: 13, color: Colors.grey),
                       ),
                       const SizedBox(height: 24),
+
+                      // Sign In Quick Persona Selectors
+                      if (!_isSignUpMode) ...[
+                        Text(
+                          'Quick Dev Persona Sign In:',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                        ),
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildPersonaChip('Pilgrim', '00000000-0000-0000-0000-000000000001'),
+                              _buildPersonaChip('Dindi Leader', '00000000-0000-0000-0000-000000000002'),
+                              _buildPersonaChip('Police', '00000000-0000-0000-0000-000000000003'),
+                              _buildPersonaChip('NGO', '00000000-0000-0000-0000-000000000004'),
+                              _buildPersonaChip('Citizen', '00000000-0000-0000-0000-000000000005'),
+                              _buildPersonaChip('Admin', '00000000-0000-0000-0000-000000000006'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
                       // Error Alert Banner
                       if (_errorMessage != null) ...[
@@ -254,10 +277,32 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
+                        Text(
+                          'Select Your Role / भूमिका निवडा:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _buildRoleChip('🚩 Pilgrim', 'pilgrim'),
+                            _buildRoleChip('🏡 Citizen', 'local_citizen'),
+                            _buildRoleChip('🚩 Leader', 'dindi_leader'),
+                            _buildRoleChip('🤝 NGO', 'ngo_volunteer'),
+                            _buildRoleChip('👮 Police', 'police_authority'),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
+                          key: ValueKey(_selectedRole),
                           initialValue: _selectedRole,
                           decoration: const InputDecoration(
-                            labelText: 'Select Your Role / भूमिका निवडा',
+                            labelText: 'Role Details / तपशील',
                             prefixIcon: Icon(Icons.badge_outlined),
                             border: OutlineInputBorder(),
                           ),
@@ -339,8 +384,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
 
                       // Divider Or
-                      Row(
-                        children: const [
+                      const Row(
+                        children: [
                           Expanded(child: Divider()),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 12),
@@ -400,6 +445,62 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRoleChip(String label, String roleKey) {
+    final isSelected = _selectedRole == roleKey;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Colors.white : Colors.black87,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: AppColors.primary,
+      backgroundColor: Colors.grey[100],
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      visualDensity: VisualDensity.compact,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() => _selectedRole = roleKey);
+        }
+      },
+    );
+  }
+
+  Widget _buildPersonaChip(String label, String uuid) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: ActionChip(
+        label: Text(label, style: const TextStyle(fontSize: 11)),
+        padding: EdgeInsets.zero,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        onPressed: _isLoading
+            ? null
+            : () async {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = null;
+                });
+                try {
+                  final profile = await _authService.fetchProfileById(uuid);
+                  if (mounted && profile != null) {
+                    _routeUserByProfile(profile);
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    setState(() => _errorMessage = 'Dev login error: $e');
+                  }
+                } finally {
+                  if (mounted) setState(() => _isLoading = false);
+                }
+              },
       ),
     );
   }

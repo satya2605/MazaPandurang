@@ -30,6 +30,11 @@ import {
   approveDindiLeader,
   rejectDindiLeader,
   suspendDindiLeader,
+  getAdminPoliceOfficers,
+  getAdminPoliceOfficerById,
+  approvePoliceOfficer,
+  rejectPoliceOfficer,
+  suspendPoliceOfficer,
   getAdminPalkhis,
   getAdminPalkhiById,
   createPalkhi,
@@ -93,6 +98,13 @@ router.get('/dindi-leaders/:id', getAdminDindiLeaderById);
 router.patch('/dindi-leaders/:id/approve', approveDindiLeader);
 router.patch('/dindi-leaders/:id/reject', rejectDindiLeader);
 router.patch('/dindi-leaders/:id/suspend', suspendDindiLeader);
+
+// Police Officer Moderation & Approval
+router.get('/police-officers', getAdminPoliceOfficers);
+router.get('/police-officers/:id', getAdminPoliceOfficerById);
+router.patch('/police-officers/:id/approve', approvePoliceOfficer);
+router.patch('/police-officers/:id/reject', rejectPoliceOfficer);
+router.patch('/police-officers/:id/suspend', suspendPoliceOfficer);
 
 // User Governance
 router.get('/users', getAdminUsers);

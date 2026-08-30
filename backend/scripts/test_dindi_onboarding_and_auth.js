@@ -1,6 +1,11 @@
-import http from 'http';
+process.env.NODE_ENV = 'test';
+process.env.NO_LISTEN = 'true';
 
-const PORT = 3000;
+import http from 'http';
+import app from '../src/server.js';
+
+let server;
+const PORT = 3015;
 
 function request(path, options = {}) {
   return new Promise((resolve, reject) => {
@@ -37,23 +42,30 @@ function request(path, options = {}) {
 }
 
 async function runOnboardingAndAuthTests() {
+  server = app.listen(PORT);
   console.log('🚀 Running Complete Dindi Leader Onboarding & Authorization Workflow Tests...\n');
 
   try {
     const leaderUserId = '00000000-0000-0000-0000-000000000002'; // Sanket
     const pilgrimUserId = '00000000-0000-0000-0000-000000000001'; // Satyajit
     const adminUserId = '00000000-0000-0000-0000-000000000006'; // Admin
+    const anotherLeaderId = '00000000-0000-0000-0000-000000000003'; // Yogeshwari
+
+    const leaderHeaders = { 'Authorization': `Bearer test-jwt-${leaderUserId}` };
+    const pilgrimHeaders = { 'Authorization': `Bearer test-jwt-${pilgrimUserId}` };
+    const adminHeaders = { 'Authorization': `Bearer test-jwt-${adminUserId}` };
+    const anotherLeaderHeaders = { 'Authorization': `Bearer test-jwt-${anotherLeaderId}` };
 
     // Ensure leader profile starts clean/unsuspended
     await request(`/api/admin/dindi-leaders/${leaderUserId}/approve`, {
       method: 'PATCH',
-      headers: { 'x-admin-id': adminUserId, 'x-admin-role': 'admin' },
+      headers: adminHeaders,
     });
 
     // 1. Submit Dindi Leader Application
     const applyRes = await request('/api/dindi-leader/apply', {
       method: 'POST',
-      headers: { 'x-user-id': leaderUserId },
+      headers: leaderHeaders,
       body: {
         dindi_name: `Tukaram Palkhi Troupe ${Date.now().toString().slice(-4)}`,
         start_point: 'Dehu',
@@ -69,7 +81,7 @@ async function runOnboardingAndAuthTests() {
     // 2. Pending leader CANNOT create Dindis
     const pendingCreateRes = await request('/api/dindis', {
       method: 'POST',
-      headers: { 'x-user-id': leaderUserId },
+      headers: leaderHeaders,
       body: {
         name: 'Unauthorized Pending Dindi',
         dindiNumber: `PEND-${Date.now().toString().slice(-4)}`,
@@ -83,7 +95,7 @@ async function runOnboardingAndAuthTests() {
     // 3. Admin approves Dindi Leader
     const approveLeaderRes = await request(`/api/admin/dindi-leaders/${leaderUserId}/approve`, {
       method: 'PATCH',
-      headers: { 'x-admin-id': adminUserId, 'x-admin-role': 'admin' },
+      headers: adminHeaders,
     });
     console.log(`[PASS 3] Admin Approves Dindi Leader -> Status ${approveLeaderRes.status} (profile status: ${approveLeaderRes.json.status})`);
     if (approveLeaderRes.status !== 200 || approveLeaderRes.json.status !== 'active') {
@@ -94,7 +106,7 @@ async function runOnboardingAndAuthTests() {
     const dindiNumber = `ACT-${Date.now().toString().slice(-6)}`;
     const activeCreateRes = await request('/api/dindis', {
       method: 'POST',
-      headers: { 'x-user-id': leaderUserId },
+      headers: leaderHeaders,
       body: {
         name: 'Approved Active Sant Dindi',
         dindiNumber,
@@ -115,7 +127,7 @@ async function runOnboardingAndAuthTests() {
     // 5. Active leader CAN edit own Dindi
     const patchRes = await request(`/api/dindis/${dindiId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': leaderUserId },
+      headers: leaderHeaders,
       body: {
         currentHalt: 'Pune Sangam',
         status: 'Halted',
@@ -128,10 +140,9 @@ async function runOnboardingAndAuthTests() {
     }
 
     // 6. Another leader CANNOT edit this leader's Dindi
-    const anotherLeaderId = '00000000-0000-0000-0000-000000000003'; // Yogeshwari
     const unauthorizedEditRes = await request(`/api/dindis/${dindiId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': anotherLeaderId },
+      headers: anotherLeaderHeaders,
       body: {
         name: 'Hijacked Dindi Name',
       },
@@ -144,7 +155,7 @@ async function runOnboardingAndAuthTests() {
     // 7. Varkari discovers Dindi & submits join request
     const joinRes = await request(`/api/dindis/${dindiId}/join`, {
       method: 'POST',
-      headers: { 'x-user-id': pilgrimUserId },
+      headers: pilgrimHeaders,
       body: {
         role: 'Taalvadak (टाळकरी)',
       },
@@ -158,7 +169,7 @@ async function runOnboardingAndAuthTests() {
     // 8. Varkari CANNOT create duplicate active/pending membership
     const duplicateJoinRes = await request(`/api/dindis/${dindiId}/join`, {
       method: 'POST',
-      headers: { 'x-user-id': pilgrimUserId },
+      headers: pilgrimHeaders,
       body: {
         role: 'Taalvadak (टाळकरी)',
       },
@@ -179,7 +190,7 @@ async function runOnboardingAndAuthTests() {
     // 10. Dindi Leader approves membership request
     const approveMemRes = await request(`/api/dindi-memberships/${membershipId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': leaderUserId },
+      headers: leaderHeaders,
       body: {
         status: 'active',
       },
@@ -192,7 +203,7 @@ async function runOnboardingAndAuthTests() {
     // 11. Unauthorized user CANNOT moderate another leader's Dindi membership
     const unauthorizedModRes = await request(`/api/dindi-memberships/${membershipId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': anotherLeaderId },
+      headers: anotherLeaderHeaders,
       body: {
         status: 'rejected',
       },
@@ -205,7 +216,7 @@ async function runOnboardingAndAuthTests() {
     // 12. Dindi Leader rejects / removes membership
     const rejectMemRes = await request(`/api/dindi-memberships/${membershipId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': leaderUserId },
+      headers: leaderHeaders,
       body: {
         status: 'rejected',
       },
@@ -218,7 +229,7 @@ async function runOnboardingAndAuthTests() {
     // 13. Admin suspends Dindi Leader
     const suspendLeaderRes = await request(`/api/admin/dindi-leaders/${leaderUserId}/suspend`, {
       method: 'PATCH',
-      headers: { 'x-admin-id': adminUserId, 'x-admin-role': 'admin' },
+      headers: adminHeaders,
       body: { reason: 'Test temporary suspension' },
     });
     console.log(`[PASS 13] Admin Suspends Dindi Leader -> Status ${suspendLeaderRes.status} (profile status: ${suspendLeaderRes.json.status})`);
@@ -226,7 +237,7 @@ async function runOnboardingAndAuthTests() {
     // 14. Suspended leader CANNOT create or manage Dindis
     const suspendedCreateRes = await request('/api/dindis', {
       method: 'POST',
-      headers: { 'x-user-id': leaderUserId },
+      headers: leaderHeaders,
       body: {
         name: 'Suspended Attempt Dindi',
         dindiNumber: `SUS-${Date.now().toString().slice(-4)}`,
@@ -240,13 +251,15 @@ async function runOnboardingAndAuthTests() {
     // Restore leader to active for normal app operation
     await request(`/api/admin/dindi-leaders/${leaderUserId}/approve`, {
       method: 'PATCH',
-      headers: { 'x-admin-id': adminUserId, 'x-admin-role': 'admin' },
+      headers: adminHeaders,
     });
 
     console.log('\n🎉 ALL 14 ONBOARDING, AUTHORIZATION, AND MEMBERSHIP LIFECYCLE TESTS PASSED CLEANLY!\n');
   } catch (err) {
     console.error('❌ Onboarding & Auth test failed:', err);
     process.exitCode = 1;
+  } finally {
+    if (server) server.close();
   }
 }
 

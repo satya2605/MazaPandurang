@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../common/navigation/app_routes.dart';
+import '../../../../core/auth/auth_service.dart';
 import '../../data/repositories/police_demo_repository.dart';
 import '../traffic/traffic_list_screen.dart';
 import '../lost_person/lost_person_list_screen.dart';
@@ -171,7 +173,12 @@ class PoliceMoreScreen extends StatelessWidget {
             label: 'Logout',
             subtitle: 'Return to role selector',
             color: const Color(0xFFD32F2F),
-            onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+            onTap: () async {
+              await AuthService().signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (r) => false);
+              }
+            },
           ),
         ],
       ),

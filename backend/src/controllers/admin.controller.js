@@ -545,6 +545,135 @@ export async function suspendDindiLeader(req, res, next) {
   }
 }
 
+// 8B. POLICE OFFICER MODERATION
+export async function getAdminPoliceOfficers(req, res, next) {
+  try {
+    const { status } = req.query;
+    const client = getSupabaseClient();
+
+    let query = client
+      .from('police_profiles')
+      .select('*, profiles:user_id(id, display_name, email, role, status)');
+    if (status) {
+      query = query.eq('status', status.toUpperCase());
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      let fallbackQuery = client.from('profiles').select('*').eq('role', 'police_authority');
+      if (status) fallbackQuery = fallbackQuery.eq('status', status.toLowerCase());
+      const { data: fbData, error: fbErr } = await fallbackQuery;
+      if (fbErr) throw fbErr;
+      return res.json(fbData || []);
+    }
+    res.json(data || []);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAdminPoliceOfficerById(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('police_profiles')
+      .select('*, profiles:user_id(id, display_name, email, role, status)')
+      .or(`id.eq.${id},user_id.eq.${id}`)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Police Officer profile not found' });
+      throw error;
+    }
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function approvePoliceOfficer(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
+    const { data: profData, error: profErr } = await client
+      .from('profiles')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (profErr) throw profErr;
+
+    await client
+      .from('police_profiles')
+      .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })
+      .eq('user_id', id);
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'APPROVE_POLICE_OFFICER', 'profile', id);
+    res.json(profData);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectPoliceOfficer(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await client
+      .from('police_profiles')
+      .update({ status: 'REJECTED', updated_at: new Date().toISOString() })
+      .eq('user_id', id);
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'REJECT_POLICE_OFFICER', 'profile', id, reason || 'Police officer application rejected');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function suspendPoliceOfficer(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ status: 'suspended', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await client
+      .from('police_profiles')
+      .update({ status: 'SUSPENDED', updated_at: new Date().toISOString() })
+      .eq('user_id', id);
+
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'SUSPEND_POLICE_OFFICER', 'profile', id, reason || 'Police officer suspended');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function rejectDindi(req, res, next) {
   try {
     const { id } = req.params;

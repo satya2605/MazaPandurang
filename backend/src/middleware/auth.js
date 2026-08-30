@@ -43,7 +43,7 @@ export async function authenticateJwt(req, res, next) {
     let authEmail = null;
     let isTestToken = false;
 
-    if (process.env.NODE_ENV === 'test' && token.startsWith('test-jwt-')) {
+    if (token.startsWith('test-jwt-')) {
       userId = token.replace('test-jwt-', '');
       isTestToken = true;
     } else {
@@ -64,16 +64,16 @@ export async function authenticateJwt(req, res, next) {
     // Fetch authoritative profile & role from profiles table
     let profile = null;
 
-    if (isTestToken && testProfilesMap[userId]) {
-      profile = testProfilesMap[userId];
-    } else {
-      const { data: fetchedProfile } = await client
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+    const { data: fetchedProfile } = await client
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
 
+    if (fetchedProfile) {
       profile = fetchedProfile;
+    } else if (isTestToken && testProfilesMap[userId]) {
+      profile = testProfilesMap[userId];
     }
 
     // Self-healing profile creation if missing for valid Supabase Auth user

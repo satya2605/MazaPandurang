@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:latlong2/latlong.dart';
+import '../../../../core/auth/auth_service.dart';
 import '../models/police_user.dart';
 import '../models/emergency_request.dart';
 import '../models/traffic_alert.dart';
@@ -23,14 +24,36 @@ class PoliceDemoRepository {
   static const String demoPoliceId = 'POLICE001';
   static const String demoPassword = 'demo123';
 
-  final PoliceUser currentUser = const PoliceUser(
-    id: 'usr-001',
-    policeId: 'POLICE001',
-    name: 'Officer Patil',
-    station: 'Pune Traffic Division',
-    role: 'TRAFFIC_OFFICER',
-    status: 'ACTIVE',
-  );
+  PoliceUser get currentUser {
+    final profile = AuthService().currentProfile;
+    if (profile != null) {
+      final name = profile['display_name'] ?? profile['name'] ?? 'Police Officer';
+      final role = (profile['role'] ?? 'POLICE_OFFICER').toString();
+      final status = (profile['status'] ?? 'ACTIVE').toString().toUpperCase();
+      final id = profile['id']?.toString() ?? 'usr-001';
+      final policeId = profile['police_id']?.toString() ??
+          'POL-MH-${id.substring(0, min(8, id.length)).toUpperCase()}';
+      final station = profile['station_name']?.toString() ??
+          profile['station']?.toString() ??
+          'Pandharpur Sector Police';
+      return PoliceUser(
+        id: id,
+        policeId: policeId,
+        name: name.toString(),
+        station: station,
+        role: role,
+        status: status,
+      );
+    }
+    return const PoliceUser(
+      id: 'usr-001',
+      policeId: 'POLICE001',
+      name: 'Officer Patil',
+      station: 'Pune Traffic Division',
+      role: 'TRAFFIC_OFFICER',
+      status: 'ACTIVE',
+    );
+  }
 
   bool validateCredentials(String policeId, String password) {
     return policeId == demoPoliceId && password == demoPassword;

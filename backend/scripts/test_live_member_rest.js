@@ -1,6 +1,11 @@
-import http from 'http';
+process.env.NODE_ENV = 'test';
+process.env.NO_LISTEN = 'true';
 
-const PORT = 3000;
+import http from 'http';
+import app from '../src/server.js';
+
+let server;
+const PORT = 3016;
 
 function request(path, options = {}) {
   return new Promise((resolve, reject) => {
@@ -37,6 +42,7 @@ function request(path, options = {}) {
 }
 
 async function runMemberIntegrationTests() {
+  server = app.listen(PORT);
   console.log('🧪 Running Live Dindi Member REST API Verification...');
 
   try {
@@ -46,7 +52,7 @@ async function runMemberIntegrationTests() {
     const testNum = `TEST-${Date.now().toString().slice(-6)}`;
     const createRes = await request('/api/dindis', {
       method: 'POST',
-      headers: { 'x-user-id': leaderUserId },
+      headers: { 'Authorization': `Bearer test-jwt-${leaderUserId}` },
       body: {
         name: `Automated Test Dindi ${testNum}`,
         dindiNumber: testNum,
@@ -77,7 +83,7 @@ async function runMemberIntegrationTests() {
     const pilgrimId = '00000000-0000-0000-0000-000000000005'; // Gauri
     const joinRes = await request(`/api/dindis/${testDindiId}/join`, {
       method: 'POST',
-      headers: { 'x-user-id': pilgrimId },
+      headers: { 'Authorization': `Bearer test-jwt-${pilgrimId}` },
       body: {
         pilgrim_id: pilgrimId,
         role: 'Taalvadak (टाळकरी)',
@@ -90,7 +96,7 @@ async function runMemberIntegrationTests() {
     // 4. Test Approving the pending member
     const approveRes = await request(`/api/dindi-memberships/${membershipId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': leaderUserId },
+      headers: { 'Authorization': `Bearer test-jwt-${leaderUserId}` },
       body: {
         status: 'active',
       },
@@ -101,7 +107,7 @@ async function runMemberIntegrationTests() {
     // 5. Test Updating Dindi lifecycle status via PATCH
     const patchDindiRes = await request(`/api/dindis/${testDindiId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': leaderUserId },
+      headers: { 'Authorization': `Bearer test-jwt-${leaderUserId}` },
       body: {
         status: 'Halted',
         roadStatus: 'Slow',
@@ -113,7 +119,7 @@ async function runMemberIntegrationTests() {
     // 6. Test Rejecting / updating membership status
     const rejectRes = await request(`/api/dindi-memberships/${membershipId}`, {
       method: 'PATCH',
-      headers: { 'x-user-id': leaderUserId },
+      headers: { 'Authorization': `Bearer test-jwt-${leaderUserId}` },
       body: {
         status: 'rejected',
       },
@@ -125,6 +131,8 @@ async function runMemberIntegrationTests() {
   } catch (err) {
     console.error('❌ Member integration test failed:', err);
     process.exitCode = 1;
+  } finally {
+    if (server) server.close();
   }
 }
 

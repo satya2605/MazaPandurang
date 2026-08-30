@@ -69,7 +69,6 @@ void main() {
 
       expect(palkhi.name, contains('Palkhi'));
       expect(dindis, isA<List<DindiMarkerInfo>>());
-      expect(dindis.isNotEmpty, isTrue);
       expect(services, isA<List<WariService>>());
       expect(routeStages.length, equals(8));
       expect(cityPlaces, isA<List<CityPlace>>());

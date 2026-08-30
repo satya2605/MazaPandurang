@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -119,18 +120,96 @@ class AuthService extends ChangeNotifier {
       throw Exception('Supabase instance is not initialized');
     }
     try {
+      final selectedRole = role ?? 'pilgrim';
+      final selectedName = displayName ?? email.split('@')[0];
+
       final AuthResponse res = await Supabase.instance.client.auth.signUp(
         email: email.trim(),
         password: password,
         data: {
-          'full_name': displayName ?? email.split('@')[0],
-          'display_name': displayName ?? email.split('@')[0],
-          'role': role ?? 'pilgrim',
+          'full_name': selectedName,
+          'display_name': selectedName,
+          'role': selectedRole,
         },
       );
 
       if (res.user != null) {
-        return await fetchProfileById(res.user!.id);
+        final initialStatus = (selectedRole == 'dindi_leader' || selectedRole == 'ngo_volunteer')
+            ? 'pending'
+            : 'active';
+
+        // 1. Authoritative Backend Profile Update (runs with service role, bypassing RLS)
+        try {
+          final patchRes = await http.patch(
+            Uri.parse('$_baseUrl/profiles/${res.user!.id}'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email.trim(),
+              'display_name': selectedName,
+              'role': selectedRole,
+              'status': initialStatus,
+            }),
+          );
+          if (patchRes.statusCode == 200) {
+            final data = jsonDecode(patchRes.body);
+            if (data is Map<String, dynamic>) {
+              data['role'] = selectedRole;
+              data['status'] = initialStatus;
+              _currentProfile = data;
+              notifyListeners();
+              return data;
+            }
+          }
+        } catch (e) {
+          debugPrint('Backend profile patch error during signup: $e');
+        }
+
+        // 2. Direct Supabase Client fallback upsert
+        try {
+          await Supabase.instance.client.from('profiles').upsert({
+            'id': res.user!.id,
+            'email': email.trim(),
+            'display_name': selectedName,
+            'role': selectedRole,
+            'status': initialStatus,
+            'updated_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'id');
+
+          // If Police Authority, also create/upsert police_profiles record
+          if (selectedRole == 'police_authority') {
+            await Supabase.instance.client.from('police_profiles').upsert({
+              'user_id': res.user!.id,
+              'police_id': 'POL-MH-${res.user!.id.substring(0, math.min(8, res.user!.id.length)).toUpperCase()}',
+              'name': selectedName,
+              'designation': 'Police Officer',
+              'station_name': 'Pandharpur Sector Police',
+              'role': 'POLICE_OFFICER',
+              'status': 'ACTIVE',
+              'updated_at': DateTime.now().toIso8601String(),
+            }, onConflict: 'user_id');
+          }
+        } catch (e) {
+          debugPrint('Profile upsert during signup warning: $e');
+        }
+
+        final profile = await fetchProfileById(res.user!.id);
+        if (profile != null) {
+          profile['role'] = selectedRole;
+          profile['status'] = initialStatus;
+          _currentProfile = profile;
+          notifyListeners();
+          return profile;
+        }
+
+        _currentProfile = {
+          'id': res.user!.id,
+          'email': email.trim(),
+          'display_name': selectedName,
+          'role': selectedRole,
+          'status': initialStatus,
+        };
+        notifyListeners();
+        return _currentProfile;
       }
     } on AuthException catch (e) {
       debugPrint('Sign up AuthException: ${e.message}');
@@ -194,6 +273,46 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Failed to submit Dindi Leader application: $e');
+    }
+    return null;
+  }
+
+  /// Police Authority Application/Registration Integration
+  Future<Map<String, dynamic>?> registerPoliceAuthority({
+    required String name,
+    String? policeId,
+    String? designation,
+    String? stationName,
+    String? phone,
+  }) async {
+    try {
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (accessToken != null) {
+        headers['Authorization'] = 'Bearer $accessToken';
+      }
+
+      final res = await http.post(
+        Uri.parse('$_baseUrl/police/register'),
+        headers: headers,
+        body: jsonEncode({
+          'police_id': policeId,
+          'name': name,
+          'designation': designation,
+          'station_name': stationName,
+          'phone': phone,
+        }),
+      );
+
+      if (res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        _currentProfile = data['profile'];
+        notifyListeners();
+        return data;
+      }
+    } catch (e) {
+      debugPrint('Failed to register Police Authority profile: $e');
     }
     return null;
   }
