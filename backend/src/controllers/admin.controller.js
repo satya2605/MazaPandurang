@@ -616,12 +616,13 @@ export async function getAdminDindiLeaders(req, res, next) {
       .from('profiles')
       .select('*')
       .eq('role', 'dindi_leader');
-    if (status) {
-      query = query.eq('status', status);
+
+    if (status && status !== 'all' && status !== 'ALL') {
+      query = query.eq('status', status.toLowerCase());
     }
 
     const { data: leaders, error: errLeaders } = await query;
-    if (errLeaders) throw errLeaders;
+    if (errLeaders && errLeaders.code !== 'PGRST116') throw errLeaders;
 
     const { data: dindisList } = await client
       .from('dindis')
@@ -630,8 +631,10 @@ export async function getAdminDindiLeaders(req, res, next) {
     const dindisByLeader = {};
     if (Array.isArray(dindisList)) {
       for (const d of dindisList) {
-        if (!dindisByLeader[d.leader_id]) dindisByLeader[d.leader_id] = [];
-        dindisByLeader[d.leader_id].push(d);
+        if (d.leader_id) {
+          if (!dindisByLeader[d.leader_id]) dindisByLeader[d.leader_id] = [];
+          dindisByLeader[d.leader_id].push(d);
+        }
       }
     }
 

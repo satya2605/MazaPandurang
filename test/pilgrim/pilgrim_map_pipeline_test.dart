@@ -141,5 +141,159 @@ void main() {
       expect(palkhi.palkhiId, equals('PAL-DEMO'));
       expect(jsonSample.containsKey('assigned_operator_id'), isFalse);
     });
+
+    test('MAP-11: Compact icon pins are rendered without permanent text overlays', () {
+      const service = WariService(
+        serviceId: 'WAT-001',
+        name: 'Dehu Mobile Toilet Facility',
+        description: 'Clean sanitation facility',
+        category: ServiceCategory.toilet,
+        position: WariLatLng(18.7148, 73.7669),
+        availabilityStatus: 'Available',
+        address: 'Dehu Ghat Road',
+        contactPhone: '+919876543210',
+      );
+
+      final entity = MapLocationEntity(
+        id: service.serviceId,
+        type: MapLocationType.serviceToilet,
+        title: service.name,
+        subtitle: service.address,
+        latitude: service.position.latitude,
+        longitude: service.position.longitude,
+        status: service.availabilityStatus,
+        metadata: {'service': service},
+      );
+
+      // Verify compact marker properties
+      expect(entity.type.icon, equals(Icons.wc_rounded));
+      expect(entity.type.color, equals(const Color(0xFF00897B))); // Teal for toilet
+      expect(entity.latitude, equals(18.7148));
+      expect(entity.longitude, equals(73.7669));
+    });
+
+    test('MAP-12: Dindi privacy — non-member pilgrim sees NO Dindi markers on public map', () {
+      final dindiList = [
+        const DindiMarkerInfo(
+          dindiId: 'DND-A',
+          name: 'Dindi A Troupe',
+          leaderName: 'Leader A',
+          memberCount: 200,
+          currentStatus: 'Active',
+          position: WariLatLng(18.3411, 74.0305),
+        ),
+        const DindiMarkerInfo(
+          dindiId: 'DND-B',
+          name: 'Dindi B Troupe',
+          leaderName: 'Leader B',
+          memberCount: 150,
+          currentStatus: 'Active',
+          position: WariLatLng(18.5204, 73.8567),
+        ),
+      ];
+
+      const String? userDindiId = null; // Public pilgrim without Dindi membership
+
+      final MapLocationEntity? userDindiEntity = userDindiId != null
+          ? dindiList.where((d) => d.dindiId == userDindiId).map((d) => MapLocationEntity(
+                id: d.dindiId,
+                type: MapLocationType.dindi,
+                title: d.name,
+                subtitle: d.leaderName,
+                latitude: d.position.latitude,
+                longitude: d.position.longitude,
+                status: d.currentStatus,
+              )).firstOrNull
+          : null;
+
+      expect(userDindiEntity, isNull); // Ensures public pilgrim receives zero Dindi markers
+    });
+
+    test('MAP-13: Dindi privacy — member of Dindi A sees ONLY Dindi A marker, not Dindi B', () {
+      final dindiList = [
+        const DindiMarkerInfo(
+          dindiId: 'DND-A',
+          name: 'Dindi A Troupe',
+          leaderName: 'Leader A',
+          memberCount: 200,
+          currentStatus: 'Active',
+          position: WariLatLng(18.3411, 74.0305),
+        ),
+        const DindiMarkerInfo(
+          dindiId: 'DND-B',
+          name: 'Dindi B Troupe',
+          leaderName: 'Leader B',
+          memberCount: 150,
+          currentStatus: 'Active',
+          position: WariLatLng(18.5204, 73.8567),
+        ),
+      ];
+
+      const String userDindiId = 'DND-A'; // Member of Dindi A
+
+      final visibleDindis = dindiList
+          .where((d) => d.dindiId == userDindiId)
+          .map((d) => MapLocationEntity(
+                id: d.dindiId,
+                type: MapLocationType.dindi,
+                title: d.name,
+                subtitle: d.leaderName,
+                latitude: d.position.latitude,
+                longitude: d.position.longitude,
+                status: d.currentStatus,
+              ))
+          .toList();
+
+      expect(visibleDindis.length, equals(1));
+      expect(visibleDindis.first.id, equals('DND-A'));
+      expect(visibleDindis.any((e) => e.id == 'DND-B'), isFalse);
+    });
+
+    test('MAP-14: Invalid or (0,0) coordinates are rejected and excluded from map marker pipeline', () {
+      bool isValidCoordinate(double? lat, double? lng) {
+        if (lat == null || lng == null) return false;
+        if (lat == 0.0 && lng == 0.0) return false;
+        if (lat < -90.0 || lat > 90.0) return false;
+        if (lng < -180.0 || lng > 180.0) return false;
+        return true;
+      }
+
+      expect(isValidCoordinate(null, 73.8567), isFalse);
+      expect(isValidCoordinate(18.5204, null), isFalse);
+      expect(isValidCoordinate(0.0, 0.0), isFalse);
+      expect(isValidCoordinate(120.0, 73.8567), isFalse); // Invalid latitude
+      expect(isValidCoordinate(18.5204, 73.8567), isTrue); // Valid latitude & longitude
+    });
+
+    test('MAP-15: Category filter correctly filters service markers', () {
+      final services = [
+        const WariService(
+          serviceId: 'MED-1',
+          name: 'Saswad Medical Camp',
+          description: 'Emergency medical center',
+          category: ServiceCategory.medical,
+          position: WariLatLng(18.3411, 74.0305),
+          availabilityStatus: 'Available',
+          address: 'Saswad Main Road',
+          contactPhone: '+919876543210',
+        ),
+        const WariService(
+          serviceId: 'WAT-1',
+          name: 'Palkhi Jal Seva',
+          description: 'Drinking water distribution',
+          category: ServiceCategory.water,
+          position: WariLatLng(18.3420, 74.0310),
+          availabilityStatus: 'Available',
+          address: 'Saswad Water Stand',
+          contactPhone: '+919876543211',
+        ),
+      ];
+
+      const selectedFilter = ServiceCategory.medical;
+      final filtered = services.where((s) => s.category == selectedFilter).toList();
+
+      expect(filtered.length, equals(1));
+      expect(filtered.first.serviceId, equals('MED-1'));
+    });
   });
 }

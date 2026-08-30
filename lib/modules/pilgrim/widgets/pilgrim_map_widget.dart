@@ -23,6 +23,7 @@ class PilgrimMapWidget extends StatefulWidget {
   final PilgrimLocation? userLocation;
   final bool? isLoading;
   final ServiceCategory? selectedCategoryFilter;
+  final String? userDindiId;
   final Function(ServiceCategory?)? onCategoryFilterSelected;
   final VoidCallback? onRefresh;
   final Function(WariService)? onServiceSelected;
@@ -42,6 +43,7 @@ class PilgrimMapWidget extends StatefulWidget {
     this.userLocation,
     this.isLoading,
     this.selectedCategoryFilter,
+    this.userDindiId,
     this.onCategoryFilterSelected,
     this.onRefresh,
     this.onServiceSelected,
@@ -78,32 +80,38 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
 
   Future<void> _loadLocalData() async {
     setState(() => _localIsLoading = true);
-    final location = await _locationService.getCurrentLocation();
-    final palkhi = await widget.repository.getPalkhiInfo();
-    final dindis = await widget.repository.getNearbyDindis();
-    final services = await widget.repository.getServices(
-      category: _localSelectedCategoryFilter,
-    );
-    final routeStages = await widget.repository.getWariRoute();
-    final trafficAlerts = await widget.repository.getTrafficAlerts();
+    try {
+      final results = await Future.wait([
+        widget.repository.getPalkhiInfo(),
+        widget.repository.getNearbyDindis(),
+        widget.repository.getServices(category: _effectiveCategoryFilter),
+        widget.repository.getWariRoute(),
+        widget.repository.getTrafficAlerts(),
+        _locationService.getCurrentLocation(),
+      ]);
 
-    if (mounted) {
-      setState(() {
-        _localUserLocation = location;
-        _localPalkhi = palkhi;
-        _localDindis = dindis;
-        _localServices = services;
-        _localRouteStages = routeStages;
-        _localTrafficAlerts = trafficAlerts;
-        _localIsLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _localPalkhi = results[0] as PalkhiInfo?;
+          _localDindis = results[1] as List<DindiMarkerInfo>;
+          _localServices = results[2] as List<WariService>;
+          _localRouteStages = results[3] as List<WariRouteStage>;
+          _localTrafficAlerts = results[4] as List<TrafficAlert>;
+          _localUserLocation = results[5] as PilgrimLocation?;
+          _localIsLoading = false;
+        });
+        _addRouteLineAndMarkers();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _localIsLoading = false);
+      }
     }
   }
 
   PalkhiInfo? get _effectivePalkhi => widget.palkhi ?? _localPalkhi;
   List<DindiMarkerInfo> get _effectiveDindis => widget.dindis ?? _localDindis;
   List<WariService> get _effectiveServices => widget.services ?? _localServices;
-  List<WariRouteStage> get _effectiveRouteStages => widget.routeStages ?? _localRouteStages;
   List<TrafficAlert> get _effectiveTrafficAlerts => widget.trafficAlerts ?? _localTrafficAlerts;
   PilgrimLocation? get _effectiveUserLocation => widget.userLocation ?? _localUserLocation;
   bool get _effectiveIsLoading => widget.isLoading ?? _localIsLoading;
@@ -125,28 +133,38 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
     _addRouteLineAndMarkers();
   }
 
+  bool _isValidCoordinate(double? lat, double? lng) {
+    if (lat == null || lng == null) return false;
+    if (lat == 0.0 && lng == 0.0) return false;
+    if (lat < -90.0 || lat > 90.0) return false;
+    if (lng < -180.0 || lng > 180.0) return false;
+    return true;
+  }
+
   List<MapLocationEntity> _buildNormalizedLocationEntities() {
     final List<MapLocationEntity> list = [];
 
     // 1. Live Palkhi Locations
     if (_effectivePalkhi != null) {
       final p = _effectivePalkhi!;
-      list.add(
-        MapLocationEntity(
-          id: p.palkhiId,
-          type: MapLocationType.palkhiLive,
-          title: p.name,
-          subtitle: 'टप्पा: ${p.currentStage} • पुढील: ${p.nextStop}',
-          latitude: p.currentPosition.latitude,
-          longitude: p.currentPosition.longitude,
-          status: 'ACTIVE',
-          metadata: {'palkhi': p},
-        ),
-      );
+      if (_isValidCoordinate(p.currentPosition.latitude, p.currentPosition.longitude)) {
+        list.add(
+          MapLocationEntity(
+            id: p.palkhiId,
+            type: MapLocationType.palkhiLive,
+            title: p.name,
+            subtitle: 'टप्पा: ${p.currentStage} • पुढील: ${p.nextStop}',
+            latitude: p.currentPosition.latitude,
+            longitude: p.currentPosition.longitude,
+            status: 'ACTIVE',
+            metadata: {'palkhi': p},
+          ),
+        );
+      }
 
       // 2. Palkhi Planned Halts
       for (final h in p.halts) {
-        if (h.approxLatitude != null && h.approxLongitude != null) {
+        if (_isValidCoordinate(h.approxLatitude, h.approxLongitude)) {
           list.add(
             MapLocationEntity(
               id: h.id,
@@ -163,26 +181,34 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
       }
     }
 
-    // 3. Dindi Markers (Strict Architectural Separation: PALKHI ≠ DINDI)
-    for (final d in _effectiveDindis) {
-      list.add(
-        MapLocationEntity(
-          id: d.dindiId,
-          type: MapLocationType.dindi,
-          title: d.name,
-          subtitle: 'प्रमुख: ${d.leaderName} • सदस्य: ${d.memberCount}',
-          latitude: d.position.latitude,
-          longitude: d.position.longitude,
-          status: d.currentStatus,
-          metadata: {'dindi': d},
-        ),
-      );
+    // 3. Dindi Markers — STRICT DINDI PRIVACY ENFORCEMENT (Rule 11)
+    // Only show Dindi marker if authenticated pilgrim is an active member of that specific Dindi
+    if (widget.userDindiId != null && widget.userDindiId!.isNotEmpty) {
+      for (final d in _effectiveDindis) {
+        if (d.dindiId == widget.userDindiId && _isValidCoordinate(d.position.latitude, d.position.longitude)) {
+          list.add(
+            MapLocationEntity(
+              id: d.dindiId,
+              type: MapLocationType.dindi,
+              title: d.name,
+              subtitle: 'प्रमुख: ${d.leaderName} • सदस्य: ${d.memberCount}',
+              latitude: d.position.latitude,
+              longitude: d.position.longitude,
+              status: d.currentStatus,
+              metadata: {'dindi': d},
+            ),
+          );
+        }
+      }
     }
 
     // 4. Categorized Service Markers
     for (final s in _effectiveServices) {
+      if (!_isValidCoordinate(s.position.latitude, s.position.longitude)) {
+        continue; // Skip invalid/missing coordinates
+      }
       if (_effectiveCategoryFilter != null && s.category != _effectiveCategoryFilter) {
-        continue;
+        continue; // Filter by category
       }
       MapLocationType sType;
       switch (s.category) {
@@ -251,22 +277,22 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
             southwest: LatLng(minLat, minLng),
             northeast: LatLng(maxLat, maxLng),
           ),
+          left: 50,
           top: 90,
+          right: 50,
           bottom: 90,
-          left: 40,
-          right: 40,
         ),
       );
     }
   }
 
-  void _addRouteLineAndMarkers() async {
+  Future<void> _addRouteLineAndMarkers() async {
     if (_mapController == null) return;
 
     final List<LatLng> coords = [];
-    if (_effectiveRouteStages.isNotEmpty) {
+    if (_localRouteStages.isNotEmpty) {
       coords.addAll(
-        _effectiveRouteStages.map(
+        _localRouteStages.map(
           (st) => LatLng(st.position.latitude, st.position.longitude),
         ),
       );
@@ -294,12 +320,9 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
       await _mapController?.addSymbol(
         SymbolOptions(
           geometry: LatLng(e.latitude, e.longitude),
-          textField: e.title,
-          textOffset: const Offset(0, 0.8),
-          textSize: 11.0,
-          textColor: '#1E293B',
-          textHaloColor: '#FFFFFF',
-          textHaloWidth: 2.0,
+          iconImage: 'marker-15',
+          iconSize: 1.2,
+          // Removed textField text overlays! Markers are compact icon pins only.
         ),
       );
     }
@@ -688,40 +711,21 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
               top: posY - 16,
               child: GestureDetector(
                 onTap: () => _handleLocationTap(e),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: e.type.color,
-                        shape: BoxShape.circle,
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                        ],
-                      ),
-                      child: Icon(e.type.icon, color: Colors.white, size: 16),
+                child: Tooltip(
+                  message: e.title,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: e.type.color,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2)),
+                      ],
                     ),
-                    Container(
-                      margin: const EdgeInsets.only(top: 2),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(230),
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
-                      ),
-                      child: Text(
-                        e.title,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: e.type.color,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                    child: Icon(e.type.icon, color: Colors.white, size: 14),
+                  ),
                 ),
               ),
             );
