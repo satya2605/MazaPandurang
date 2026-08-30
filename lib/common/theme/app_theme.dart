@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
 /// Material 3 theme configuration for Maza Pandurang application.
 class AppTheme {
   static ThemeData get lightTheme {
-    return ThemeData(
+    final baseTheme = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
@@ -34,7 +35,7 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -48,7 +49,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.primary, width: 1.5),
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(0, 44),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -63,6 +64,10 @@ class AppTheme {
         waitDuration: Duration(milliseconds: 500),
         showDuration: Duration(milliseconds: 1500),
       ),
+    );
+
+    return baseTheme.copyWith(
+      textTheme: GoogleFonts.notoSansDevanagariTextTheme(baseTheme.textTheme),
     );
   }
 }

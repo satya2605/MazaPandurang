@@ -825,8 +825,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             ),
                           ],
                           const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                          Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               if (isPending) ...[
                                 OutlinedButton.icon(
@@ -834,7 +836,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   icon: const Icon(Icons.close, size: 14, color: Colors.red),
                                   label: const Text('Reject', style: TextStyle(color: Colors.red, fontSize: 12)),
                                 ),
-                                const SizedBox(width: 8),
                                 ElevatedButton.icon(
                                   onPressed: () => _handleDindiLeaderApprove(leader.id),
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
