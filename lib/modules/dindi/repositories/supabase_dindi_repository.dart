@@ -45,12 +45,13 @@ class SupabaseDindiRepository implements DindiRepository {
     final headers = <String, String>{
       'Accept': 'application/json',
     };
-    final profile = AuthService().currentProfile;
-    if (profile != null && profile['id'] != null) {
-      headers['x-user-id'] = profile['id'].toString();
+    final token = AuthService().accessToken;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
     } else {
-      // Canonical dev leader profile fallback for Sanket in tests/standalone
-      headers['x-user-id'] = '00000000-0000-0000-0000-000000000002';
+      final profile = AuthService().currentProfile;
+      final userId = profile?['id']?.toString() ?? '00000000-0000-0000-0000-000000000002';
+      headers['Authorization'] = 'Bearer test-jwt-$userId';
     }
     if (extra != null) {
       headers.addAll(extra);
@@ -203,6 +204,84 @@ class SupabaseDindiRepository implements DindiRepository {
       throw DindiRepositoryException(
         'Unable to update Dindi: $e',
       );
+    }
+  }
+
+  @override
+  Future<bool> updateDindiLocation(
+    String dindiId, {
+    required double latitude,
+    required double longitude,
+    String? locationName,
+    String? currentHalt,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/dindis/$dindiId/location');
+    try {
+      final response = await _client.patch(
+        uri,
+        headers: _buildHeaders({'Content-Type': 'application/json'}),
+        body: json.encode({
+          'latitude': latitude,
+          'longitude': longitude,
+          'current_location_name': locationName,
+          'current_halt': currentHalt,
+        }),
+      ).timeout(const Duration(seconds: 6));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[SupabaseDindiRepository] updateDindiLocation error: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> addDindiHalt(String dindiId, Map<String, dynamic> haltData) async {
+    final uri = Uri.parse('$baseUrl/api/dindis/$dindiId/halts');
+    try {
+      final response = await _client.post(
+        uri,
+        headers: _buildHeaders({'Content-Type': 'application/json'}),
+        body: json.encode(haltData),
+      ).timeout(const Duration(seconds: 6));
+
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[SupabaseDindiRepository] addDindiHalt error: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> updateDindiHalt(String haltId, Map<String, dynamic> haltData) async {
+    final uri = Uri.parse('$baseUrl/api/dindis/halts/$haltId');
+    try {
+      final response = await _client.put(
+        uri,
+        headers: _buildHeaders({'Content-Type': 'application/json'}),
+        body: json.encode(haltData),
+      ).timeout(const Duration(seconds: 6));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[SupabaseDindiRepository] updateDindiHalt error: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> deleteDindiHalt(String haltId) async {
+    final uri = Uri.parse('$baseUrl/api/dindis/halts/$haltId');
+    try {
+      final response = await _client.delete(
+        uri,
+        headers: _buildHeaders(),
+      ).timeout(const Duration(seconds: 6));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[SupabaseDindiRepository] deleteDindiHalt error: $e');
+      return false;
     }
   }
 

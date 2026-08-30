@@ -9,13 +9,12 @@ export async function getProfileById(req, res, next) {
       .from('profiles')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({ error: 'Profile not found' });
-      }
-      throw error;
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: { message: `Profile '${id}' not found` } });
     }
 
     res.json(data);

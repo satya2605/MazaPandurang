@@ -4,6 +4,7 @@ import '../models/pilgrim_models.dart';
 abstract class PilgrimRepository {
   Future<PilgrimLocation> getCurrentUserLocation();
   Future<PalkhiInfo> getPalkhiInfo();
+  Future<List<PalkhiInfo>> getPalkhiList();
   Future<List<DindiMarkerInfo>> getNearbyDindis();
   Future<DindiDetail?> getDindiById(String id);
   Future<List<Map<String, dynamic>>> getDindiMembers(String id);

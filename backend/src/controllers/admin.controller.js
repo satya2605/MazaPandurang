@@ -295,16 +295,43 @@ export async function approveDindi(req, res, next) {
     const { id } = req.params;
     const client = getSupabaseClient();
 
-    const { data, error } = await client
-      .from('dindis')
-      .update({ status: 'Active', updated_at: new Date().toISOString() })
-      .or(`id.eq.${id},dindi_number.eq.${id}`)
-      .select()
-      .single();
+    let query = client.from('dindis').update({ status: 'Active', updated_at: new Date().toISOString() });
+    if (id.includes('-')) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('dindi_number', id);
+    }
+
+    const { data, error } = await query.select();
 
     if (error) throw error;
-    await recordAuditLog(req.adminUser?.id, 'APPROVE_DINDI', 'dindi', id);
-    res.json(data);
+    const item = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'APPROVE_DINDI', 'dindi', id);
+    res.json(item || { id, status: 'Active' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectDindi(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    let query = client.from('dindis').update({ status: 'Rejected', updated_at: new Date().toISOString() });
+    if (id.includes('-')) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('dindi_number', id);
+    }
+
+    const { data, error } = await query.select();
+
+    if (error) throw error;
+    const item = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'REJECT_DINDI', 'dindi', id, reason || 'Rejected by admin');
+    res.json(item || { id, status: 'Rejected' });
   } catch (err) {
     next(err);
   }
@@ -316,15 +343,80 @@ export async function suspendDindi(req, res, next) {
     const { reason } = req.body;
     const client = getSupabaseClient();
 
+    let query = client.from('dindis').update({ status: 'Suspended', updated_at: new Date().toISOString() });
+    if (id.includes('-')) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('dindi_number', id);
+    }
+
+    const { data, error } = await query.select();
+
+    if (error) throw error;
+    const item = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'SUSPEND_DINDI', 'dindi', id, reason || 'Suspended by admin');
+    res.json(item || { id, status: 'Suspended' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function approveDindiLeader(req, res, next) {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+
     const { data, error } = await client
-      .from('dindis')
-      .update({ status: 'Suspended', updated_at: new Date().toISOString() })
-      .or(`id.eq.${id},dindi_number.eq.${id}`)
+      .from('profiles')
+      .update({ role: 'dindi_leader', status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
-    await recordAuditLog(req.adminUser?.id, 'SUSPEND_DINDI', 'dindi', id, reason || 'Suspended by admin');
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'APPROVE_DINDI_LEADER', 'profile', id);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectDindiLeader(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'REJECT_DINDI_LEADER', 'profile', id, reason || 'Application unverified');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function suspendDindiLeader(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ status: 'suspended', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await recordAuditLog(req.user?.id || req.adminUser?.id, 'SUSPEND_DINDI_LEADER', 'profile', id, reason || 'Suspended by admin');
     res.json(data);
   } catch (err) {
     next(err);
@@ -457,15 +549,33 @@ export async function getAdminDindiLeaders(req, res, next) {
 
     let query = client
       .from('profiles')
-      .select('*, dindis(id, name, dindi_number, status, start_point, destination, member_count)')
+      .select('*')
       .eq('role', 'dindi_leader');
     if (status) {
       query = query.eq('status', status);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    res.json(data || []);
+    const { data: leaders, error: errLeaders } = await query;
+    if (errLeaders) throw errLeaders;
+
+    const { data: dindisList } = await client
+      .from('dindis')
+      .select('id, name, dindi_number, status, start_point, destination, member_count, leader_id');
+
+    const dindisByLeader = {};
+    if (Array.isArray(dindisList)) {
+      for (const d of dindisList) {
+        if (!dindisByLeader[d.leader_id]) dindisByLeader[d.leader_id] = [];
+        dindisByLeader[d.leader_id].push(d);
+      }
+    }
+
+    const result = (leaders || []).map((l) => ({
+      ...l,
+      dindis: dindisByLeader[l.id] || [],
+    }));
+
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -476,90 +586,29 @@ export async function getAdminDindiLeaderById(req, res, next) {
     const { id } = req.params;
     const client = getSupabaseClient();
 
-    const { data, error } = await client
+    const { data: leader, error } = await client
       .from('profiles')
-      .select('*, dindis(*)')
+      .select('*')
       .eq('id', id)
-      .eq('role', 'dindi_leader')
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Dindi Leader profile not found' });
-      throw error;
-    }
-
-    res.json(data);
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function approveDindiLeader(req, res, next) {
-  try {
-    const { id } = req.params;
-    const client = getSupabaseClient();
-
-    const { data, error } = await client
-      .from('profiles')
-      .update({ status: 'active', updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!leader) return res.status(404).json({ error: 'Dindi Leader profile not found' });
 
-    await recordAuditLog(req.user?.id || req.adminUser?.id, 'APPROVE_DINDI_LEADER', 'profile', id);
-    res.json(data);
+    const { data: dindis } = await client
+      .from('dindis')
+      .select('*')
+      .eq('leader_id', id);
+
+    res.json({
+      ...leader,
+      dindis: dindis || [],
+    });
   } catch (err) {
     next(err);
   }
 }
 
-export async function rejectDindiLeader(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const client = getSupabaseClient();
-
-    const { data, error } = await client
-      .from('profiles')
-      .update({ status: 'rejected', updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    await recordAuditLog(req.user?.id || req.adminUser?.id, 'REJECT_DINDI_LEADER', 'profile', id, reason || 'Dindi leader application rejected');
-    res.json(data);
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function suspendDindiLeader(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const client = getSupabaseClient();
-
-    const { data, error } = await client
-      .from('profiles')
-      .update({ status: 'suspended', updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Also suspend Dindis led by this leader
-    await client.from('dindis').update({ status: 'Suspended' }).eq('leader_id', id);
-
-    await recordAuditLog(req.user?.id || req.adminUser?.id, 'SUSPEND_DINDI_LEADER', 'profile', id, reason || 'Dindi leader suspended');
-    res.json(data);
-  } catch (err) {
-    next(err);
-  }
-}
 
 // 8B. POLICE OFFICER MODERATION
 export async function getAdminPoliceOfficers(req, res, next) {
@@ -690,26 +739,7 @@ export async function suspendPoliceOfficer(req, res, next) {
   }
 }
 
-export async function rejectDindi(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const client = getSupabaseClient();
 
-    const { data, error } = await client
-      .from('dindis')
-      .update({ status: 'Rejected', updated_at: new Date().toISOString() })
-      .or(`id.eq.${id},dindi_number.eq.${id}`)
-      .select()
-      .single();
-
-    if (error) throw error;
-    await recordAuditLog(req.user?.id || req.adminUser?.id, 'REJECT_DINDI', 'dindi', id, reason || 'Dindi registration rejected');
-    res.json(data);
-  } catch (err) {
-    next(err);
-  }
-}
 
 export async function closeLostPerson(req, res, next) {
   try {

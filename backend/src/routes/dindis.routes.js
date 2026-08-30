@@ -5,6 +5,10 @@ import {
   getDindiById,
   createDindi,
   updateDindi,
+  updateDindiLocation,
+  addDindiHalt,
+  updateDindiHalt,
+  deleteDindiHalt,
   getDindiMembers,
   joinDindi,
   updateDindiMembership,
@@ -18,10 +22,19 @@ router.get('/', getAllDindis);
 router.get('/:id', getDindiById);
 router.get('/:id/members', getDindiMembers);
 
-// Authenticated Write & Moderation Endpoints
+// Authenticated Write & Operational Endpoints
 router.post('/', authenticateJwt, createDindi);
 router.patch('/:id', authenticateJwt, updateDindi);
 router.put('/:id', authenticateJwt, updateDindi);
+router.patch('/:id/location', authenticateJwt, updateDindiLocation);
+
+// Multi-Day Planned Halt Planner Endpoints
+router.post('/:id/halts', authenticateJwt, addDindiHalt);
+router.put('/halts/:haltId', authenticateJwt, updateDindiHalt);
+router.patch('/halts/:haltId', authenticateJwt, updateDindiHalt);
+router.delete('/halts/:haltId', authenticateJwt, deleteDindiHalt);
+
+// Pilgrim Membership Endpoints
 router.post('/:id/join', authenticateJwt, joinDindi);
 router.patch('/memberships/:id', authenticateJwt, updateDindiMembership);
 

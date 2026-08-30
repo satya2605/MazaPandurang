@@ -135,6 +135,8 @@ class AdminDindi {
   final String status;
   final String startPoint;
   final String destination;
+  final String leaderImageUrl;
+  final String documentUrl;
 
   const AdminDindi({
     required this.id,
@@ -146,6 +148,8 @@ class AdminDindi {
     required this.status,
     required this.startPoint,
     required this.destination,
+    this.leaderImageUrl = '',
+    this.documentUrl = '',
   });
 
   factory AdminDindi.fromJson(Map<String, dynamic> json) {
@@ -159,6 +163,8 @@ class AdminDindi {
       status: json['status']?.toString() ?? 'Pending',
       startPoint: json['start_point']?.toString() ?? json['startPoint']?.toString() ?? '',
       destination: json['destination']?.toString() ?? '',
+      leaderImageUrl: json['leader_image_url']?.toString() ?? json['leaderImageUrl']?.toString() ?? '',
+      documentUrl: json['document_url']?.toString() ?? json['documentUrl']?.toString() ?? '',
     );
   }
 }
@@ -181,6 +187,7 @@ class AdminPalkhi {
   final String operatorName;
   final String operatorEmail;
   final String updatedAt;
+  final List<PalkhiHalt> halts;
 
   const AdminPalkhi({
     required this.id,
@@ -199,27 +206,96 @@ class AdminPalkhi {
     required this.operatorName,
     required this.operatorEmail,
     required this.updatedAt,
+    this.halts = const [],
   });
 
   factory AdminPalkhi.fromJson(Map<String, dynamic> json) {
+    var rawHalts = json['halts'];
+    List<PalkhiHalt> parsedHalts = [];
+    if (rawHalts is List) {
+      parsedHalts = rawHalts
+          .whereType<Map<String, dynamic>>()
+          .map((h) => PalkhiHalt.fromJson(h))
+          .toList();
+      parsedHalts.sort((a, b) => a.dayNumber.compareTo(b.dayNumber));
+    }
+
     return AdminPalkhi(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Palkhi',
       saint: json['saint']?.toString() ?? 'Sant Dnyaneshwar Maharaj',
       description: json['description']?.toString() ?? '',
-      startPoint: json['start_point']?.toString() ?? 'Alandi',
-      destination: json['destination']?.toString() ?? 'Pandharpur',
+      startPoint: json['start_point']?.toString() ?? json['startPoint']?.toString() ?? 'Alandi',
+      destination: json['destination']?.toString() ?? json['destination']?.toString() ?? 'Pandharpur',
       currentStage: json['current_stage']?.toString() ?? json['currentStage']?.toString() ?? '',
       nextStop: json['next_stop']?.toString() ?? json['nextStop']?.toString() ?? '',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 18.6772,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 73.8967,
       status: json['status']?.toString() ?? 'ACTIVE',
-      isPublished: json['is_published'] == true,
+      isPublished: json['is_published'] == true || json['is_published'] == 'true',
       assignedOperatorId: json['assigned_operator_id']?.toString() ?? json['operator']?['id']?.toString(),
       operatorName: json['operator']?['display_name']?.toString() ?? 'No Operator Assigned',
       operatorEmail: json['operator']?['email']?.toString() ?? '',
       updatedAt: json['updated_at']?.toString() ?? '',
+      halts: parsedHalts,
     );
+  }
+}
+
+/// Model representing a scheduled Multi-Day Halt for a Palkhi procession.
+class PalkhiHalt {
+  final String id;
+  final String palkhiId;
+  final int dayNumber;
+  final String haltDate;
+  final String locationName;
+  final double? approxLatitude;
+  final double? approxLongitude;
+  final String? nextDestination;
+  final String? expectedArrival;
+  final String? expectedDeparture;
+
+  const PalkhiHalt({
+    required this.id,
+    required this.palkhiId,
+    required this.dayNumber,
+    required this.haltDate,
+    required this.locationName,
+    this.approxLatitude,
+    this.approxLongitude,
+    this.nextDestination,
+    this.expectedArrival,
+    this.expectedDeparture,
+  });
+
+  factory PalkhiHalt.fromJson(Map<String, dynamic> json) {
+    return PalkhiHalt(
+      id: json['id']?.toString() ?? '',
+      palkhiId: json['palkhi_id']?.toString() ?? json['palkhiId']?.toString() ?? '',
+      dayNumber: (json['day_number'] as num?)?.toInt() ?? (json['dayNumber'] as num?)?.toInt() ?? 1,
+      haltDate: json['halt_date']?.toString() ?? json['haltDate']?.toString() ?? '',
+      locationName: json['location_name']?.toString() ?? json['locationName']?.toString() ?? '',
+      approxLatitude: (json['approx_latitude'] as num?)?.toDouble() ?? (json['approxLatitude'] as num?)?.toDouble(),
+      approxLongitude: (json['approx_longitude'] as num?)?.toDouble() ?? (json['approxLongitude'] as num?)?.toDouble(),
+      nextDestination: json['next_destination']?.toString() ?? json['nextDestination']?.toString(),
+      expectedArrival: json['expected_arrival']?.toString() ?? json['expectedArrival']?.toString(),
+      expectedDeparture: json['expected_departure']?.toString() ?? json['expectedDeparture']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'palkhi_id': palkhiId,
+      'day_number': dayNumber,
+      'halt_date': haltDate,
+      'location_name': locationName,
+      'approx_latitude': approxLatitude,
+      'approx_longitude': approxLongitude,
+      'next_destination': nextDestination,
+      'expected_arrival': expectedArrival,
+      'expected_departure': expectedDeparture,
+    };
   }
 }
 

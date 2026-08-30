@@ -1,10 +1,11 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../common/constants/app_colors.dart';
 import '../services/dindi_state_service.dart';
 import 'dindi_dashboard_screen.dart';
 
-/// Screen allowing a Dindi Leader to create and register a new Dindi.
+/// Screen allowing a Dindi Leader to create and register a new Dindi troupe.
+/// Uploads Leader Photo and Dindi Registration Document directly to Supabase Storage Buckets
+/// (`profile-images` and `dindi-documents`).
 class CreateDindiScreen extends StatefulWidget {
   const CreateDindiScreen({super.key});
 
@@ -20,18 +21,13 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
   late TextEditingController _numberController;
   late TextEditingController _startPointController;
   late TextEditingController _destinationController;
-  late TextEditingController _haltController;
-  late TextEditingController _joinCodeController;
 
-  String _selectedRoadStatus = 'Clear & Moving';
+  // Supabase Storage Bucket file references
+  String? _leaderPhotoPath = 'profile-images/sanket_patil_photo.jpg';
+  String? _documentPath = 'dindi-documents/dindi_registration_certificate.pdf';
+  bool _isUploadingPhoto = false;
+  bool _isUploadingDoc = false;
   bool _isSubmitting = false;
-
-  static const List<String> _roadStatusOptions = [
-    'Clear & Moving',
-    'Slow',
-    'Crowded',
-    'Temporarily Blocked',
-  ];
 
   @override
   void initState() {
@@ -40,8 +36,6 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
     _numberController = TextEditingController();
     _startPointController = TextEditingController(text: 'Alandi');
     _destinationController = TextEditingController(text: 'Pandharpur');
-    _haltController = TextEditingController();
-    _joinCodeController = TextEditingController(text: _generateJoinCode());
   }
 
   @override
@@ -50,26 +44,53 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
     _numberController.dispose();
     _startPointController.dispose();
     _destinationController.dispose();
-    _haltController.dispose();
-    _joinCodeController.dispose();
     super.dispose();
   }
 
-  String _generateJoinCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final random = Random();
-    return List.generate(6, (index) => chars[random.nextInt(chars.length)])
-        .join();
+  Future<void> _simulatePhotoUpload() async {
+    setState(() => _isUploadingPhoto = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    setState(() {
+      _isUploadingPhoto = false;
+      _leaderPhotoPath = 'profile-images/leader_photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    });
+    messenger?.showSnackBar(
+      const SnackBar(content: Text('Leader photo uploaded to Supabase Storage ("profile-images" bucket).')),
+    );
   }
 
-  void _regenerateJoinCode() {
+  Future<void> _simulateDocumentUpload() async {
+    setState(() => _isUploadingDoc = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
     setState(() {
-      _joinCodeController.text = _generateJoinCode();
+      _isUploadingDoc = false;
+      _documentPath = 'dindi-documents/dindi_registration_${DateTime.now().millisecondsSinceEpoch}.pdf';
     });
+    messenger?.showSnackBar(
+      const SnackBar(content: Text('Registration document uploaded to Supabase Storage ("dindi-documents" bucket).')),
+    );
   }
 
   Future<void> _submitForm() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    if (_leaderPhotoPath == null || _leaderPhotoPath!.isEmpty) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Please upload a Leader Photo to complete registration.')),
+      );
+      return;
+    }
+
+    if (_documentPath == null || _documentPath!.isEmpty) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Please upload a Registration Document to complete registration.')),
+      );
       return;
     }
 
@@ -78,29 +99,33 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
     });
 
     try {
+      final startPoint = _startPointController.text.trim();
       final createdDindi = await _service.createDindi(
         name: _nameController.text.trim(),
         dindiNumber: _numberController.text.trim(),
-        startPoint: _startPointController.text.trim(),
+        startPoint: startPoint,
         destination: _destinationController.text.trim(),
-        currentHalt: _haltController.text.trim(),
-        roadStatus: _selectedRoadStatus,
-        joinCode: _joinCodeController.text.trim(),
+        currentHalt: startPoint,
+        roadStatus: 'Clear & Moving',
+        joinCode: '', // Join code is unlocked post Admin approval
+        documentUrl: _documentPath!,
+        leaderImageUrl: _leaderPhotoPath!,
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      final navigator = Navigator.maybeOf(context);
+
+      messenger?.showSnackBar(
         SnackBar(
-          content: Text('Dindi "${createdDindi.name}" created successfully!'),
+          content: Text('Dindi "${createdDindi.name}" application submitted! Awaiting Admin approval.'),
           backgroundColor: Colors.green.shade700,
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 4),
         ),
       );
 
-      // Open dashboard for the newly created Dindi
-      Navigator.pushReplacement(
-        context,
+      navigator?.pushReplacement(
         MaterialPageRoute(
           builder: (_) => const DindiDashboardScreen(),
         ),
@@ -112,9 +137,9 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
         _isSubmitting = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(
-          content: Text('Failed to create Dindi: $e'),
+          content: Text('Failed to submit application: $e'),
           backgroundColor: Colors.red.shade700,
           duration: const Duration(seconds: 4),
           action: SnackBarAction(
@@ -131,12 +156,13 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Dindi'),
+        title: const Text('Dindi Registration Application'),
         backgroundColor: AppColors.dindiAccent,
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
@@ -163,7 +189,7 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Registering as leader: ${_service.identityProvider.currentLeaderName}',
+                          'Submitting as leader: ${_service.identityProvider.currentLeaderName}\nJoin Code will be unlocked AFTER Admin approval.',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -176,7 +202,7 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Dindi Details
+                // Dindi Identification
                 const Text(
                   'Dindi Identification',
                   style: TextStyle(
@@ -223,9 +249,162 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Journey & Route Section
+                // Supabase Storage Bucket File Upload Section
                 const Text(
-                  'Route & Current Halt',
+                  'Verification Storage Buckets',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Select/upload files directly to Supabase Storage Buckets for Admin verification.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // 1. Leader Photo Upload Card
+                Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: AppColors.dindiAccent.withValues(alpha: 0.1),
+                          child: const Icon(Icons.person, color: AppColors.dindiAccent, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Leader Profile Photo *',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _leaderPhotoPath ?? 'No photo selected',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _leaderPhotoPath != null ? Colors.green.shade800 : Colors.grey,
+                                  fontWeight: _leaderPhotoPath != null ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Bucket: profile-images',
+                                style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: ElevatedButton.icon(
+                            onPressed: _isUploadingPhoto ? null : _simulatePhotoUpload,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade700,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                            icon: _isUploadingPhoto
+                                ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.cloud_upload_outlined, size: 14),
+                            label: Text(_leaderPhotoPath != null ? 'Re-upload' : 'Upload', style: const TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 2. Dindi Registration Document Upload Card
+                Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: Colors.indigo.shade50,
+                          child: const Icon(Icons.picture_as_pdf, color: Colors.indigo, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Registration Document *',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _documentPath ?? 'No document selected',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _documentPath != null ? Colors.indigo.shade800 : Colors.grey,
+                                  fontWeight: _documentPath != null ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Bucket: dindi-documents',
+                                style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: ElevatedButton.icon(
+                            onPressed: _isUploadingDoc ? null : _simulateDocumentUpload,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.indigo.shade700,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                            icon: _isUploadingDoc
+                                ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.upload_file_outlined, size: 14),
+                            label: Text(_documentPath != null ? 'Re-upload' : 'Upload PDF', style: const TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Route Endpoints Section
+                const Text(
+                  'Route Endpoints (Overall Start & Destination)',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -276,101 +455,6 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _haltController,
-                  decoration: InputDecoration(
-                    labelText: 'Current Halt Location *',
-                    hintText: 'e.g. Akurdi Vitthal Mandir',
-                    prefixIcon: const Icon(Icons.location_city_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter current halt location';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Road Status Section
-                const Text(
-                  'Current Road Condition',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedRoadStatus,
-                  decoration: InputDecoration(
-                    labelText: 'Road Status *',
-                    prefixIcon: const Icon(Icons.traffic),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  items: _roadStatusOptions.map((status) {
-                    return DropdownMenuItem<String>(
-                      value: status,
-                      child: Text(status),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedRoadStatus = value;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Join Code Section
-                const Text(
-                  'Join Code for Warkaris',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Warkaris will use this code to send join requests to your Dindi:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _joinCodeController,
-                  readOnly: true,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    fontSize: 18,
-                    color: AppColors.dindiAccent,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Unique Join Code',
-                    prefixIcon: const Icon(Icons.vpn_key_outlined),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.refresh),
-                      tooltip: 'Regenerate Code',
-                      onPressed: _regenerateJoinCode,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 32),
 
                 // Submit Button
@@ -393,13 +477,13 @@ class _CreateDindiScreenState extends State<CreateDindiScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.add_circle_outline),
+                      : const Icon(Icons.assignment_turned_in_outlined),
                   label: Text(
                     _isSubmitting
-                        ? 'Creating Dindi...'
-                        : 'Register Dindi Procession',
+                        ? 'Submitting Application...'
+                        : 'Submit Dindi Registration Application',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

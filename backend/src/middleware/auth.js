@@ -61,7 +61,7 @@ export async function authenticateJwt(req, res, next) {
       authEmail = authData.user.email;
     }
 
-    // Fetch authoritative profile & role from profiles table
+    // Fetch authoritative profile & role from profiles table (DB first)
     let profile = null;
 
     const { data: fetchedProfile } = await client

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../admin/models/admin_models.dart' show PalkhiHalt;
 
 /// Geographical coordinate representation.
 class WariLatLng {
@@ -45,21 +46,65 @@ class PilgrimLocation {
 class PalkhiInfo {
   final String palkhiId;
   final String name;
+  final String saint;
+  final String startPoint;
+  final String destination;
   final String currentStage;
   final String nextStop;
   final WariLatLng currentPosition;
   final List<WariLatLng> routePoints;
   final DateTime lastUpdated;
+  final List<PalkhiHalt> halts;
 
   const PalkhiInfo({
     required this.palkhiId,
     required this.name,
+    this.saint = 'Sant Dnyaneshwar Maharaj',
+    this.startPoint = 'Alandi',
+    this.destination = 'Pandharpur',
     required this.currentStage,
     required this.nextStop,
     required this.currentPosition,
     required this.routePoints,
     required this.lastUpdated,
+    this.halts = const [],
   });
+
+  factory PalkhiInfo.fromJson(Map<String, dynamic> json) {
+    double lat = 18.6772;
+    double lng = 73.8967;
+    if (json['latitude'] != null) lat = (json['latitude'] as num).toDouble();
+    if (json['longitude'] != null) lng = (json['longitude'] as num).toDouble();
+    if (json['current_location'] != null && json['current_location'] is Map) {
+      final loc = json['current_location'] as Map;
+      if (loc['latitude'] != null) lat = (loc['latitude'] as num).toDouble();
+      if (loc['longitude'] != null) lng = (loc['longitude'] as num).toDouble();
+    }
+
+    var rawHalts = json['halts'];
+    List<PalkhiHalt> parsedHalts = [];
+    if (rawHalts is List) {
+      parsedHalts = rawHalts
+          .whereType<Map<String, dynamic>>()
+          .map((h) => PalkhiHalt.fromJson(h))
+          .toList();
+      parsedHalts.sort((a, b) => a.dayNumber.compareTo(b.dayNumber));
+    }
+
+    return PalkhiInfo(
+      palkhiId: json['id']?.toString() ?? json['palkhiId']?.toString() ?? 'PALKHI-001',
+      name: json['name']?.toString() ?? 'Sant Dnyaneshwar Maharaj Palkhi',
+      saint: json['saint']?.toString() ?? 'Sant Dnyaneshwar Maharaj',
+      startPoint: json['start_point']?.toString() ?? json['startPoint']?.toString() ?? 'Alandi',
+      destination: json['destination']?.toString() ?? json['destination']?.toString() ?? 'Pandharpur',
+      currentStage: json['currentStage']?.toString() ?? json['current_stage']?.toString() ?? json['current_location']?['current_stage']?.toString() ?? 'Alandi',
+      nextStop: json['nextStop']?.toString() ?? json['next_stop']?.toString() ?? json['current_location']?['next_stop']?.toString() ?? 'Pune Stay',
+      currentPosition: WariLatLng(lat, lng),
+      routePoints: const [],
+      lastUpdated: DateTime.tryParse(json['lastUpdated']?.toString() ?? json['last_updated']?.toString() ?? '') ?? DateTime.now(),
+      halts: parsedHalts,
+    );
+  }
 }
 
 /// Dindi marker representation for Pilgrim map display.

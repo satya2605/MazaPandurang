@@ -519,8 +519,69 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ========================================================
+-- MAZA PANDURANG — DATABASE SCHEMA MIGRATION 007
+-- Multi-Day Planned Halt Schedule for Palkhi Registry
+-- ========================================================
+
+CREATE TABLE IF NOT EXISTS palkhi_halts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  palkhi_id VARCHAR(255) NOT NULL REFERENCES palkhi_tracking(id) ON DELETE CASCADE,
+  day_number INT NOT NULL CHECK (day_number > 0),
+  halt_date DATE NOT NULL,
+  location_name VARCHAR(255) NOT NULL,
+  approx_latitude NUMERIC(10, 6) CHECK (approx_latitude BETWEEN -90 AND 90),
+  approx_longitude NUMERIC(10, 6) CHECK (approx_longitude BETWEEN -180 AND 180),
+  next_destination VARCHAR(255),
+  expected_arrival VARCHAR(100),
+  expected_departure VARCHAR(100),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT unique_palkhi_day UNIQUE (palkhi_id, day_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_palkhi_halts_palkhi_id ON palkhi_halts(palkhi_id);
+CREATE INDEX IF NOT EXISTS idx_palkhi_halts_date ON palkhi_halts(halt_date);
+
+
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- ========================================================
+-- MAZA PANDURANG — DATABASE SCHEMA MIGRATION 008
+-- Multi-Day Planned Halt Schedule for Dindis
+-- ========================================================
+
+CREATE TABLE IF NOT EXISTS public.dindi_halts (
+    id VARCHAR(255) PRIMARY KEY,
+    dindi_id VARCHAR(255) NOT NULL REFERENCES public.dindis(id) ON DELETE CASCADE,
+    day_number INTEGER NOT NULL CHECK (day_number > 0),
+    halt_date VARCHAR(50) NOT NULL,
+    location_name VARCHAR(255) NOT NULL,
+    approx_latitude DOUBLE PRECISION,
+    approx_longitude DOUBLE PRECISION,
+    next_destination VARCHAR(255),
+    expected_arrival VARCHAR(50),
+    expected_departure VARCHAR(50),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_dindi_day UNIQUE (dindi_id, day_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dindi_halts_dindi_id ON public.dindi_halts(dindi_id);
+CREATE INDEX IF NOT EXISTS idx_dindi_halts_date ON public.dindi_halts(halt_date);
+
+-- ========================================================
+-- MAZA PANDURANG — DATABASE SCHEMA MIGRATION 009
+-- Add Leader Photo & Dindi Registration Document Columns to Dindis
+-- ========================================================
+
+ALTER TABLE public.dindis
+  ADD COLUMN IF NOT EXISTS document_url VARCHAR(1024),
+  ADD COLUMN IF NOT EXISTS leader_image_url VARCHAR(1024);
+
+
 

@@ -37,7 +37,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Palkhi Live Track (पालखी)'), findsOneWidget);
-      expect(find.text('Sant Dnyaneshwar Maharaj Palkhi'), findsOneWidget);
+      expect(find.text('Sant Dnyaneshwar Maharaj Palkhi'), findsWidgets);
     });
 
     testWidgets('Tapping Services tab opens Services discovery view',

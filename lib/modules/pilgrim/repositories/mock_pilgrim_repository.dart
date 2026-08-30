@@ -1,3 +1,4 @@
+import '../../admin/models/admin_models.dart' show PalkhiHalt;
 import '../models/pilgrim_models.dart';
 import 'pilgrim_repository.dart';
 
@@ -23,12 +24,43 @@ class MockPilgrimRepository implements PilgrimRepository {
   static final PalkhiInfo samplePalkhi = PalkhiInfo(
     palkhiId: 'PLK-001',
     name: 'Sant Dnyaneshwar Maharaj Palkhi',
+    saint: 'Sant Dnyaneshwar Maharaj',
+    startPoint: 'Alandi',
+    destination: 'Pandharpur',
     currentStage: 'Saswad Stay (सासवड मुक्काम)',
     nextStop: 'Jejuri (जेजुरी)',
     currentPosition: saswadLocation,
     routePoints: wariRoute,
     lastUpdated: DateTime.now(),
+    halts: const [
+      PalkhiHalt(id: 'H1', palkhiId: 'PLK-001', dayNumber: 1, haltDate: '2026-06-18', locationName: 'Alandi Departure', approxLatitude: 18.6772, approxLongitude: 73.8967, nextDestination: 'Pune', expectedArrival: '06:00', expectedDeparture: '10:00'),
+      PalkhiHalt(id: 'H2', palkhiId: 'PLK-001', dayNumber: 2, haltDate: '2026-06-19', locationName: 'Pune Stay', approxLatitude: 18.5204, approxLongitude: 73.8567, nextDestination: 'Saswad', expectedArrival: '16:00', expectedDeparture: '08:00'),
+      PalkhiHalt(id: 'H3', palkhiId: 'PLK-001', dayNumber: 3, haltDate: '2026-06-20', locationName: 'Saswad Stay', approxLatitude: 18.3411, approxLongitude: 74.0305, nextDestination: 'Jejuri', expectedArrival: '14:00', expectedDeparture: '07:00'),
+      PalkhiHalt(id: 'H4', palkhiId: 'PLK-001', dayNumber: 4, haltDate: '2026-06-21', locationName: 'Jejuri', approxLatitude: 18.2764, approxLongitude: 74.1611, nextDestination: 'Lonand', expectedArrival: '13:00', expectedDeparture: '18:00'),
+      PalkhiHalt(id: 'H5', palkhiId: 'PLK-001', dayNumber: 5, haltDate: '2026-06-22', locationName: 'Pandharpur Dham', approxLatitude: 17.6777, approxLongitude: 75.3283, nextDestination: 'Pandharpur Temple', expectedArrival: '12:00', expectedDeparture: '20:00'),
+    ],
   );
+
+  static final List<PalkhiInfo> samplePalkhis = [
+    samplePalkhi,
+    PalkhiInfo(
+      palkhiId: 'PLK-002',
+      name: 'Sant Tukaram Maharaj Palkhi',
+      saint: 'Sant Tukaram Maharaj',
+      startPoint: 'Dehu',
+      destination: 'Pandharpur',
+      currentStage: 'Loni Kalbhor Stay (लोणी काळभोर मुक्काम)',
+      nextStop: 'Yavat (यवत)',
+      currentPosition: const WariLatLng(18.4877, 74.1192),
+      routePoints: wariRoute,
+      lastUpdated: DateTime.now(),
+      halts: const [
+        PalkhiHalt(id: 'H21', palkhiId: 'PLK-002', dayNumber: 1, haltDate: '2026-06-18', locationName: 'Dehu Departure', approxLatitude: 18.7183, approxLongitude: 73.7694, nextDestination: 'Akurdi', expectedArrival: '06:00', expectedDeparture: '11:00'),
+        PalkhiHalt(id: 'H22', palkhiId: 'PLK-002', dayNumber: 2, haltDate: '2026-06-19', locationName: 'Pune Stay', approxLatitude: 18.5204, approxLongitude: 73.8567, nextDestination: 'Loni Kalbhor', expectedArrival: '15:00', expectedDeparture: '08:00'),
+        PalkhiHalt(id: 'H23', palkhiId: 'PLK-002', dayNumber: 3, haltDate: '2026-06-20', locationName: 'Loni Kalbhor', approxLatitude: 18.4877, approxLongitude: 74.1192, nextDestination: 'Yavat', expectedArrival: '14:00', expectedDeparture: '07:00'),
+      ],
+    ),
+  ];
 
   static final List<DindiMarkerInfo> sampleDindis = [
     const DindiMarkerInfo(
@@ -209,6 +241,11 @@ class MockPilgrimRepository implements PilgrimRepository {
   @override
   Future<PalkhiInfo> getPalkhiInfo() async {
     return samplePalkhi;
+  }
+
+  @override
+  Future<List<PalkhiInfo>> getPalkhiList() async {
+    return samplePalkhis;
   }
 
   @override

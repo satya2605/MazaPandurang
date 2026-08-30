@@ -200,6 +200,8 @@ class DindiStateService extends ChangeNotifier {
     required String roadStatus,
     required String joinCode,
     String? leaderUserId,
+    String? documentUrl,
+    String? leaderImageUrl,
   }) async {
     final effectiveLeaderId = leaderUserId ?? _identityProvider.currentUserId;
     final effectiveLeaderName =
@@ -219,6 +221,8 @@ class DindiStateService extends ChangeNotifier {
       roadStatus: roadStatus,
       joinCode: joinCode,
       leaderUserId: effectiveLeaderId,
+      documentUrl: documentUrl ?? '',
+      leaderImageUrl: leaderImageUrl ?? '',
     );
 
     final created = await _repository.createDindi(newDindi);

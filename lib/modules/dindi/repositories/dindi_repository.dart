@@ -2,8 +2,7 @@ import '../models/dindi_announcement.dart';
 import '../models/dindi_group.dart';
 import '../models/dindi_member.dart';
 
-/// Minimal repository contract for Dindi data access.
-/// Designed for easy substitution with SupabaseDindiRepository in future phases.
+/// Repository contract for Dindi data access.
 abstract class DindiRepository {
   Future<List<DindiGroup>> getDindis({String? leaderUserId});
 
@@ -12,6 +11,20 @@ abstract class DindiRepository {
   Future<DindiGroup> createDindi(DindiGroup dindi);
 
   Future<DindiGroup> updateDindi(DindiGroup dindi);
+
+  Future<bool> updateDindiLocation(
+    String dindiId, {
+    required double latitude,
+    required double longitude,
+    String? locationName,
+    String? currentHalt,
+  });
+
+  Future<bool> addDindiHalt(String dindiId, Map<String, dynamic> haltData);
+
+  Future<bool> updateDindiHalt(String haltId, Map<String, dynamic> haltData);
+
+  Future<bool> deleteDindiHalt(String haltId);
 
   Future<List<DindiMember>> getMembers(String dindiId);
 

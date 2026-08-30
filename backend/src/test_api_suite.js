@@ -144,12 +144,13 @@ async function runTestSuite() {
       },
     });
     const createdLeaderId = auth6.json.leader_id || auth6.json.leaderUserId;
+    const otherLeaderDindiId = auth6.json.id;
     assert(auth6.status === 201 && createdLeaderId === '00000000-0000-0000-0000-000000000002', 'AUTH 6: Dindi creation derives leader_id authoritatively from JWT');
 
     // AUTH 7: Pilgrim attempting to create Dindi -> 403 Forbidden (Non-leader blocked)
     const auth7 = await request('/api/dindis', {
       method: 'POST',
-      headers: pilgrimToken,
+      headers: citizenToken,
       body: {
         name: `Spoof Dindi ${Date.now()}`,
         dindi_number: `DND-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -269,6 +270,294 @@ async function runTestSuite() {
     // AUTH 25: Admin audit logs endpoint security
     const auth25 = await request('/api/admin/audit-logs', { headers: adminToken });
     assert(auth25.status === 200 && Array.isArray(auth25.json), 'AUTH 25: Admin audit logs endpoint returns 200 array for Admin token');
+
+    // AUTH 26: Admin Palkhi Registry creation
+    const auth26 = await request('/api/admin/palkhis', {
+      method: 'POST',
+      headers: adminToken,
+      body: { name: `Test Palkhi ${Date.now()}`, saint: 'Sant Tukaram Maharaj', start_point: 'Dehu', destination: 'Pandharpur' }
+    });
+    assert(auth26.status === 201 && auth26.json.palkhi && auth26.json.palkhi.id, 'AUTH 26: Admin can create new Palkhi entity in registry');
+    const newPalkhiId = auth26.json.palkhi.id;
+
+    // AUTH 27: Admin Multi-Day Halt Planning
+    const auth27 = await request(`/api/admin/palkhis/${newPalkhiId}/halts`, {
+      method: 'POST',
+      headers: adminToken,
+      body: { day_number: 1, halt_date: '2026-06-18', location_name: 'Dehu Departure', expected_arrival: '06:00', expected_departure: '10:00', next_destination: 'Akurdi' }
+    });
+    assert(auth27.status === 201 && auth27.json.halt && auth27.json.halt.location_name === 'Dehu Departure', 'AUTH 27: Admin can add planned halt schedule to Palkhi');
+
+    // AUTH 28: Publish Palkhi and verify public endpoint returns halts
+    await request(`/api/admin/palkhis/${newPalkhiId}/publish`, { method: 'PATCH', headers: adminToken });
+    const auth28 = await request('/api/palkhi');
+    assert(auth28.status === 200 && Array.isArray(auth28.json), 'AUTH 28: Public GET /api/palkhi returns published Palkhis with halts array');
+
+    // AUTH 29: Strict Palkhi / Dindi Data Separation check
+    const auth29 = await request('/api/palkhi');
+    const hasDindiInPalkhi = Array.isArray(auth29.json) && auth29.json.some(p => p.leaderName !== undefined || p.dindiNumber !== undefined);
+    assert(!hasDindiInPalkhi, 'AUTH 29: Public Palkhi API payload strictly contains only Palkhis (0 Dindis)');
+
+    // AUTH 30: Unauthenticated halt creation blocked
+    const auth30 = await request(`/api/admin/palkhis/${newPalkhiId}/halts`, {
+      method: 'POST',
+      body: { day_number: 2, halt_date: '2026-06-19', location_name: 'Pune Stay' }
+    });
+    assert(auth30.status === 401 || auth30.status === 403, 'AUTH 30: Unauthenticated attempt to add Palkhi halt blocked with 401/403');
+
+    // --- SECTION 3: Task 2 — Dindi Leader Workflow & Operational Test Suite (DINDI 1 - DINDI 36) ---
+    console.log('\n--- Section 3: Task 2 — Dindi Leader & Operations Suite ---');
+
+    // DINDI 1: Authenticated user submits leader application -> success
+    const dindi1 = await request('/api/dindi-leader/apply', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { dindi_name: `Test Leader Troupe ${Date.now()}`, start_point: 'Alandi', destination: 'Pandharpur' }
+    });
+    assert(dindi1.status === 201, 'DINDI 1: Authenticated user can submit Dindi Leader application');
+
+    // DINDI 2: Unauthenticated application -> 401
+    const dindi2 = await request('/api/dindi-leader/apply', {
+      method: 'POST',
+      body: { dindi_name: 'Unauth Troupe' }
+    });
+    assert(dindi2.status === 401, 'DINDI 2: Unauthenticated Dindi Leader application returns 401 Unauthorized');
+
+    // DINDI 3: Leader application starts pending status
+    const dindi3 = await request('/api/profiles/00000000-0000-0000-0000-000000000001', { headers: pilgrimToken });
+    assert(dindi3.status === 200 && dindi3.json.role === 'dindi_leader' && dindi3.json.status === 'pending', 'DINDI 3: Applied Dindi Leader profile role is dindi_leader and status is pending');
+
+    // DINDI 4: Pending leader cannot create Dindi -> 403
+    const dindi4 = await request('/api/dindis', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { name: 'Pending Troupe Creation' }
+    });
+    assert(dindi4.status === 403, 'DINDI 4: Pending Dindi Leader cannot create Dindi (403 Forbidden)');
+
+    // DINDI 5: Admin retrieves pending Dindi Leaders
+    const dindi5 = await request('/api/admin/users?role=dindi_leader&status=pending', { headers: adminToken });
+    assert(dindi5.status === 200 && Array.isArray(dindi5.json), 'DINDI 5: Admin can retrieve pending Dindi Leader applications');
+
+    // DINDI 6: Admin approves leader
+    const dindi6 = await request('/api/admin/dindi-leaders/00000000-0000-0000-0000-000000000001/approve', {
+      method: 'PATCH',
+      headers: adminToken
+    });
+    assert(dindi6.status === 200, 'DINDI 6: Admin can approve Dindi Leader application');
+
+    // DINDI 7: Leader profile becomes active
+    const dindi7 = await request('/api/profiles/00000000-0000-0000-0000-000000000001', { headers: pilgrimToken });
+    assert(dindi7.status === 200 && dindi7.json.status === 'active', 'DINDI 7: Approved Dindi Leader profile status becomes active');
+
+    // DINDI 8: Non-admin cannot approve leader -> 403
+    const dindi8 = await request('/api/admin/dindi-leaders/00000000-0000-0000-0000-000000000005/approve', {
+      method: 'PATCH',
+      headers: dindiLeaderToken
+    });
+    assert(dindi8.status === 403, 'DINDI 8: Non-admin cannot approve Dindi Leader (403 Forbidden)');
+
+    // DINDI 9: Active leader creates Dindi
+    const dindi9 = await request('/api/dindis', {
+      method: 'POST',
+      headers: pilgrimToken, // User 1 is now an active dindi_leader
+      body: { name: `Active Leader Dindi ${Date.now()}`, startPoint: 'Alandi', destination: 'Pandharpur', dindi_number: `DND-TEST-${Date.now()}` }
+    });
+    assert(dindi9.status === 201 && dindi9.json.id, 'DINDI 9: Active Dindi Leader can create Dindi');
+    const createdDindiId = dindi9.json.id;
+
+    // DINDI 10: leader_id comes from JWT
+    assert(dindi9.json.leader_id === '00000000-0000-0000-0000-000000000001', 'DINDI 10: Dindi leader_id is authoritatively assigned from JWT bearer token');
+
+    // DINDI 11: Spoofed leader_id is ignored
+    const dindi11 = await request('/api/dindis', {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { name: `Spoof Test Dindi ${Date.now()}`, leader_id: '00000000-0000-0000-0000-000000000006' }
+    });
+    assert(dindi11.status === 201 && dindi11.json.leader_id === '00000000-0000-0000-0000-000000000001', 'DINDI 11: Client-supplied leader_id in body is ignored; JWT leader_id enforced');
+
+    // DINDI 12: New Dindi starts Pending
+    assert(dindi9.json.status === 'Pending', 'DINDI 12: Newly created Dindi entity starts in Pending status');
+
+    // DINDI 13: Admin retrieves pending Dindis
+    const dindi13 = await request('/api/admin/dindis?status=Pending', { headers: adminToken });
+    assert(dindi13.status === 200 && Array.isArray(dindi13.json), 'DINDI 13: Admin can retrieve pending Dindi list');
+
+    // DINDI 14: Admin approves Dindi
+    const dindi14 = await request(`/api/admin/dindis/${createdDindiId}/approve`, {
+      method: 'PATCH',
+      headers: adminToken
+    });
+    assert(dindi14.status === 200, 'DINDI 14: Admin can approve Dindi entity');
+
+    // DINDI 15: Dindi becomes Active
+    const dindi15 = await request(`/api/dindis/${createdDindiId}`, { headers: adminToken });
+    assert(dindi15.status === 200 && dindi15.json.status === 'Active', 'DINDI 15: Approved Dindi status becomes Active');
+
+    // DINDI 16: Join Code becomes active
+    assert(dindi15.json.joinCode && dindi15.json.joinCode.length > 0, 'DINDI 16: Join Code is active for approved Dindi');
+
+    // DINDI 17: Leader adds halt to own Dindi
+    const dindi17 = await request(`/api/dindis/${createdDindiId}/halts`, {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { day_number: 1, halt_date: '2026-06-18', location_name: 'Alandi Stay', expected_arrival: '08:00', expected_departure: '12:00' }
+    });
+    assert(dindi17.status === 201 && dindi17.json.halt && dindi17.json.halt.location_name === 'Alandi Stay', 'DINDI 17: Leader can add multi-day planned halt to own Dindi');
+    const createdHaltId = dindi17.json.halt.id;
+
+    // DINDI 18: Leader edits own halt
+    const dindi18 = await request(`/api/dindis/halts/${createdHaltId}`, {
+      method: 'PUT',
+      headers: pilgrimToken,
+      body: { location_name: 'Alandi Departure Stay' }
+    });
+    assert(dindi18.status === 200 && dindi18.json.halt.location_name === 'Alandi Departure Stay', 'DINDI 18: Leader can edit own Dindi halt schedule');
+
+    // DINDI 19: Leader deletes own halt
+    const dindi19 = await request(`/api/dindis/halts/${createdHaltId}`, {
+      method: 'DELETE',
+      headers: pilgrimToken
+    });
+    assert(dindi19.status === 200, 'DINDI 19: Leader can delete own Dindi halt schedule');
+
+    // DINDI 20: Leader cannot modify another Dindi's halt
+    const dindi20 = await request(`/api/dindis/${otherLeaderDindiId}/halts`, {
+      method: 'POST',
+      headers: pilgrimToken,
+      body: { day_number: 1, halt_date: '2026-06-18', location_name: 'Unauthorized Halt' }
+    });
+    assert(dindi20.status === 403, 'DINDI 20: Dindi Leader cannot add/modify halt for another leader\'s Dindi (403 Forbidden)');
+
+    // DINDI 21: Leader updates own Dindi location
+    const dindi21 = await request(`/api/dindis/${createdDindiId}/location`, {
+      method: 'PATCH',
+      headers: pilgrimToken,
+      body: { latitude: 18.5204, longitude: 73.8567, location_name: 'Pune Center' }
+    });
+    assert(dindi21.status === 200, 'DINDI 21: Leader can update own Dindi live location');
+
+    // DINDI 22: Leader cannot update another Dindi
+    const dindi22 = await request(`/api/dindis/${otherLeaderDindiId}/location`, {
+      method: 'PATCH',
+      headers: pilgrimToken,
+      body: { latitude: 18.5204, longitude: 73.8567 }
+    });
+    assert(dindi22.status === 403, 'DINDI 22: Leader cannot update location for another leader\'s Dindi (403 Forbidden)');
+
+    // DINDI 23: Suspended Dindi cannot receive location updates
+    await request(`/api/admin/dindis/${createdDindiId}/suspend`, { method: 'PATCH', headers: adminToken });
+    const dindi23 = await request(`/api/dindis/${createdDindiId}/location`, {
+      method: 'PATCH',
+      headers: pilgrimToken,
+      body: { latitude: 18.5204, longitude: 73.8567 }
+    });
+    assert(dindi23.status === 403, 'DINDI 23: Suspended Dindi cannot receive live location updates (403 Forbidden)');
+    // Re-approve Dindi for subsequent join tests
+    await request(`/api/admin/dindis/${createdDindiId}/approve`, { method: 'PATCH', headers: adminToken });
+
+    // DINDI 24: Pilgrim joins Active Dindi using Join Code
+    const dindi24 = await request(`/api/dindis/${createdDindiId}/join`, {
+      method: 'POST',
+      headers: citizenToken,
+      body: { role: 'warkari' }
+    });
+    assert(dindi24.status === 201 || dindi24.status === 200, 'DINDI 24: Pilgrim can request to join Active Dindi');
+    const memberRequestId = dindi24.json.id;
+
+    // DINDI 25: Invalid Join Code rejected
+    const dindi25 = await request('/api/dindis/INVALID-JOIN-CODE-9999/join', {
+      method: 'POST',
+      headers: citizenToken
+    });
+    assert(dindi25.status === 404, 'DINDI 25: Requesting to join invalid Dindi/JoinCode returns 404');
+
+    // DINDI 26: Pending Dindi cannot accept join request
+    const pendingDindiRes = await request('/api/dindis', {
+      method: 'POST',
+      headers: dindiLeaderToken,
+      body: { name: `Pending Dindi Join Test ${Date.now()}` }
+    });
+    const pendingDindiId = pendingDindiRes.json.id;
+    const dindi26 = await request(`/api/dindis/${pendingDindiId}/join`, {
+      method: 'POST',
+      headers: citizenToken
+    });
+    assert(dindi26.status === 403, 'DINDI 26: Join request for Pending Dindi is blocked (403 Forbidden)');
+
+    // DINDI 27: Suspended Dindi cannot accept join request
+    await request(`/api/admin/dindis/${createdDindiId}/suspend`, { method: 'PATCH', headers: adminToken });
+    const dindi27 = await request(`/api/dindis/${createdDindiId}/join`, {
+      method: 'POST',
+      headers: citizenToken
+    });
+    assert(dindi27.status === 403, 'DINDI 27: Join request for Suspended Dindi is blocked (403 Forbidden)');
+    await request(`/api/admin/dindis/${createdDindiId}/approve`, { method: 'PATCH', headers: adminToken });
+
+    // DINDI 28: Leader sees pending member requests
+    const dindi28 = await request(`/api/dindis/${createdDindiId}/members`, { headers: pilgrimToken });
+    assert(dindi28.status === 200 && Array.isArray(dindi28.json), 'DINDI 28: Dindi Leader can retrieve member list');
+
+    // DINDI 29: Leader approves member
+    const dindi29 = await request(`/api/dindi-memberships/${memberRequestId}`, {
+      method: 'PATCH',
+      headers: pilgrimToken,
+      body: { status: 'active' }
+    });
+    assert(dindi29.status === 200 && dindi29.json.status === 'active', 'DINDI 29: Leader can approve pending member join request');
+
+    // DINDI 30: Leader rejects member
+    const dindi30 = await request(`/api/dindi-memberships/${memberRequestId}`, {
+      method: 'PATCH',
+      headers: pilgrimToken,
+      body: { status: 'rejected' }
+    });
+    assert(dindi30.status === 200 && dindi30.json.status === 'rejected', 'DINDI 30: Leader can reject member request');
+
+    // DINDI 31: Different Dindi Leader cannot modify request
+    const dindi31 = await request(`/api/dindi-memberships/${memberRequestId}`, {
+      method: 'PATCH',
+      headers: dindiLeaderToken, // Different leader
+      body: { status: 'active' }
+    });
+    assert(dindi31.status === 403, 'DINDI 31: Different Dindi Leader cannot modify member request for another leader\'s Dindi (403 Forbidden)');
+
+    // DINDI 32: Pilgrim cannot create Dindi
+    const dindi32 = await request('/api/dindis', {
+      method: 'POST',
+      headers: citizenToken,
+      body: { name: 'Pilgrim Created Dindi' }
+    });
+    assert(dindi32.status === 403, 'DINDI 32: Pilgrim role cannot create Dindi (403 Forbidden)');
+
+    // DINDI 33: Pending leader cannot manage Dindi
+    const dindi33 = await request('/api/dindis', {
+      method: 'POST',
+      headers: policeToken,
+      body: { name: 'Unauthorized Creation' }
+    });
+    assert(dindi33.status === 403, 'DINDI 33: Non-dindi-leader profile role cannot manage Dindis (403 Forbidden)');
+
+    // DINDI 34: Non-admin cannot approve Dindi
+    const dindi34 = await request(`/api/admin/dindis/${createdDindiId}/approve`, {
+      method: 'PATCH',
+      headers: pilgrimToken
+    });
+    assert(dindi34.status === 403, 'DINDI 34: Non-admin cannot approve Dindi (403 Forbidden)');
+
+    // DINDI 35: Client identity spoofing is ignored
+    const dindi35 = await request('/api/dindis', {
+      method: 'POST',
+      headers: { ...pilgrimToken, 'x-user-id': '00000000-0000-0000-0000-000000000006' },
+      body: { name: `Identity Test ${Date.now()}` }
+    });
+    assert(dindi35.status === 201 && dindi35.json.leader_id === '00000000-0000-0000-0000-000000000001', 'DINDI 35: Spoofed x-user-id header is ignored in favor of verified JWT identity');
+
+    // DINDI 36: Palkhi records never appear in Dindi response
+    const dindi36 = await request('/api/dindis');
+    const hasPalkhiInDindi = Array.isArray(dindi36.json) && dindi36.json.some(d => d.saint !== undefined);
+    assert(!hasPalkhiInDindi, 'DINDI 36: Public Dindi API response contains strictly 0 Palkhi records');
 
     console.log(`\n🎉 MASTER API SUITE SUMMARY: ${passedTests} / ${totalTests} CHECKS PASSED (${Math.round((passedTests / totalTests) * 100)}% SUCCESS RATE)\n`);
   } catch (err) {

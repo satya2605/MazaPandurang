@@ -646,10 +646,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildDindiLeadersTab() {
-    final pendingApplications = _dindiLeaders.where((l) => l.status.toLowerCase() == 'pending').toList();
+    final pendingApplications = _dindiLeaders.where((l) => (l.status).toLowerCase() == 'pending').toList();
     final filtered = _dindiLeaders.where((l) {
       if (_dindiLeaderFilter == 'ALL') return true;
-      return l.status.toUpperCase() == _dindiLeaderFilter;
+      return (l.status).toUpperCase() == _dindiLeaderFilter;
     }).toList();
 
     return Column(
@@ -713,9 +713,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 )
               else
                 ...filtered.map((leader) {
-                  final isPending = leader.status.toLowerCase() == 'pending';
-                  final isActive = leader.status.toLowerCase() == 'active';
-                  final isSuspended = leader.status.toLowerCase() == 'suspended';
+                  final statusLower = (leader.status).toLowerCase();
+                  final isPending = statusLower == 'pending';
+                  final isActive = statusLower == 'active';
+                  final isSuspended = statusLower == 'suspended';
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -873,13 +874,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   child: Text('Registered Dindi Troupes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 ..._dindis.map((dindi) {
-                  final isPending = dindi.status.toLowerCase() == 'pending';
+                  final statusLower = (dindi.status).toLowerCase();
+                  final isPending = statusLower == 'pending';
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       title: Text('${dindi.dindiNumber} — ${dindi.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(
-                        'Leader: ${dindi.leaderName} (${dindi.leaderPhone})\nRoute: ${dindi.startPoint} ➔ ${dindi.destination} | Members: ${dindi.memberCount}\nStatus: ${dindi.status.toUpperCase()}',
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Leader: ${dindi.leaderName} (${dindi.leaderPhone})\nRoute: ${dindi.startPoint} ➔ ${dindi.destination} | Members: ${dindi.memberCount}\nStatus: ${dindi.status.toUpperCase()}',
+                          ),
+                          if (dindi.leaderImageUrl.isNotEmpty || dindi.documentUrl.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                if (dindi.leaderImageUrl.isNotEmpty)
+                                  Chip(
+                                    avatar: const Icon(Icons.person, size: 14, color: Colors.blue),
+                                    label: const Text('Leader Photo Verified', style: TextStyle(fontSize: 10)),
+                                    backgroundColor: Colors.blue.shade50,
+                                  ),
+                                if (dindi.documentUrl.isNotEmpty)
+                                  ActionChip(
+                                    avatar: const Icon(Icons.description, size: 14, color: Colors.indigo),
+                                    label: const Text('View Registration Doc', style: TextStyle(fontSize: 10, color: Colors.indigo, fontWeight: FontWeight.bold)),
+                                    backgroundColor: Colors.indigo.shade50,
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Verification Document: ${dindi.documentUrl}')),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
                       isThreeLine: true,
                       trailing: Wrap(
@@ -1149,6 +1181,97 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             ),
                           ],
                         ),
+                        const Divider(height: 20),
+
+                        // Planned Multi-Day Halts Schedule Section
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Planned Halts (${palkhi.halts.length})',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () => _showAddHaltDialog(palkhi),
+                              icon: const Icon(Icons.add_location_alt, size: 16),
+                              label: const Text('+ Add Halt'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        if (palkhi.halts.isEmpty) ...[
+                          const Text(
+                            'No scheduled halts added yet. Tap "+ Add Halt" to set up day-by-day stops.',
+                            style: TextStyle(fontSize: 12, color: Colors.black54, fontStyle: FontStyle.italic),
+                          ),
+                        ] else ...[
+                          Column(
+                            children: palkhi.halts.map((halt) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.purple[100],
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Day ${halt.dayNumber}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                          color: Colors.purple[900],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${halt.haltDate} — ${halt.locationName}',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          ),
+                                          Text(
+                                            'Arr: ${halt.expectedArrival ?? "N/A"} | Dep: ${halt.expectedDeparture ?? "N/A"} | Next: ${halt.nextDestination ?? "N/A"}',
+                                            style: const TextStyle(fontSize: 11, color: Colors.black54),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                      onPressed: () async {
+                                        final success = await _repository.deletePalkhiHalt(halt.id);
+                                        if (success) {
+                                          _showMessage('Planned halt deleted.');
+                                          _fetchAllData();
+                                        } else {
+                                          _showMessage('Failed to delete halt.', isError: true);
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
@@ -1330,6 +1453,133 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               }
             },
             child: const Text('Assign Operator'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddHaltDialog(AdminPalkhi palkhi) async {
+    final nextDayNum = palkhi.halts.isNotEmpty
+        ? (palkhi.halts.map((h) => h.dayNumber).reduce((a, b) => a > b ? a : b) + 1)
+        : 1;
+
+    final dayCtrl = TextEditingController(text: '$nextDayNum');
+    final dateCtrl = TextEditingController(text: '2026-06-${17 + nextDayNum}');
+    final locCtrl = TextEditingController();
+    final latCtrl = TextEditingController();
+    final lngCtrl = TextEditingController();
+    final arrCtrl = TextEditingController(text: '08:00');
+    final depCtrl = TextEditingController(text: '12:00');
+    final nextCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Add Scheduled Halt — ${palkhi.name}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: dayCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Day Number *'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: dateCtrl,
+                      decoration: const InputDecoration(labelText: 'Halt Date (YYYY-MM-DD) *'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: locCtrl,
+                decoration: const InputDecoration(labelText: 'Location Name (e.g. Pune Stay) *'),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: arrCtrl,
+                      decoration: const InputDecoration(labelText: 'Expected Arrival (HH:MM)'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: depCtrl,
+                      decoration: const InputDecoration(labelText: 'Expected Departure (HH:MM)'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: nextCtrl,
+                decoration: const InputDecoration(labelText: 'Next Destination Point'),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: latCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Approx Lat (Optional)'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: lngCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Approx Lng (Optional)'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final day = int.tryParse(dayCtrl.text.trim());
+              final loc = locCtrl.text.trim();
+              final date = dateCtrl.text.trim();
+              if (day == null || day <= 0 || loc.isEmpty || date.isEmpty) {
+                _showMessage('Day Number, Date, and Location Name are required.', isError: true);
+                return;
+              }
+              Navigator.pop(ctx);
+              final success = await _repository.addPalkhiHalt(palkhi.id, {
+                'day_number': day,
+                'halt_date': date,
+                'location_name': loc,
+                'expected_arrival': arrCtrl.text.trim(),
+                'expected_departure': depCtrl.text.trim(),
+                'next_destination': nextCtrl.text.trim(),
+                'approx_latitude': double.tryParse(latCtrl.text.trim()),
+                'approx_longitude': double.tryParse(lngCtrl.text.trim()),
+              });
+              if (success) {
+                _showMessage('Planned halt added for Day $day.');
+                _fetchAllData();
+              } else {
+                _showMessage('Failed to add planned halt.', isError: true);
+              }
+            },
+            child: const Text('Add Halt'),
           ),
         ],
       ),

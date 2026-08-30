@@ -18,32 +18,31 @@ class ApiPilgrimRepository implements PilgrimRepository {
 
   @override
   Future<PalkhiInfo> getPalkhiInfo() async {
+    final list = await getPalkhiList();
+    return list.isNotEmpty ? list.first : await _fallback.getPalkhiInfo();
+  }
+
+  @override
+  Future<List<PalkhiInfo>> getPalkhiList() async {
     try {
-      final response = await _apiClient.get('/palkhi').timeout(const Duration(seconds: 4));
+      final response = await _apiClient.get('/palkhi').timeout(const Duration(milliseconds: 600));
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
-        final Map<String, dynamic> data = (decoded is List && decoded.isNotEmpty)
-            ? decoded.first as Map<String, dynamic>
-            : (decoded is Map<String, dynamic> ? decoded : <String, dynamic>{});
-        debugPrint('[API] /api/palkhi success');
-        return PalkhiInfo(
-          palkhiId: (data['id'] ?? 'PALKHI-001').toString(),
-          name: data['name'] ?? 'Sant Dnyaneshwar Maharaj Palkhi',
-          currentStage: data['currentStage'] ?? data['current_stage'] ?? 'Saswad Stay',
-          nextStop: data['nextStop'] ?? data['next_stop'] ?? 'Jejuri',
-          currentPosition: WariLatLng(
-            data['latitude']?.toDouble() ?? 18.3411,
-            data['longitude']?.toDouble() ?? 74.0305,
-          ),
-          lastUpdated: DateTime.tryParse(data['lastUpdated'] ?? data['updated_at'] ?? '') ?? DateTime.now(),
-          routePoints: (await _fallback.getPalkhiInfo()).routePoints,
-        );
+        if (decoded is List) {
+          final list = decoded
+              .whereType<Map<String, dynamic>>()
+              .map((data) => PalkhiInfo.fromJson(data))
+              .toList();
+          if (list.isNotEmpty) return list;
+        } else if (decoded is Map<String, dynamic>) {
+          return [PalkhiInfo.fromJson(decoded)];
+        }
       }
     } catch (e) {
       debugPrint('[MOCK] /api/palkhi fallback: $e');
     }
-    return await _fallback.getPalkhiInfo();
+    return await _fallback.getPalkhiList();
   }
 
   @override

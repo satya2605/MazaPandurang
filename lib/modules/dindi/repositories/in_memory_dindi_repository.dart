@@ -288,6 +288,46 @@ class InMemoryDindiRepository implements DindiRepository {
   }
 
   @override
+  Future<bool> updateDindiLocation(
+    String dindiId, {
+    required double latitude,
+    required double longitude,
+    String? locationName,
+    String? currentHalt,
+  }) async {
+    final index = _dindis.indexWhere((d) => d.id == dindiId);
+    if (index != -1) {
+      _dindis[index] = _dindis[index].copyWith(
+        currentHalt: currentHalt ?? _dindis[index].currentHalt,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  Future<bool> addDindiHalt(String dindiId, Map<String, dynamic> haltData) async {
+    final index = _dindis.indexWhere((d) => d.id == dindiId);
+    if (index != -1) {
+      final halt = DindiHalt.fromJson({...haltData, 'dindi_id': dindiId});
+      final updatedHalts = List<DindiHalt>.from(_dindis[index].halts)..add(halt);
+      _dindis[index] = _dindis[index].copyWith(halts: updatedHalts);
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  Future<bool> updateDindiHalt(String haltId, Map<String, dynamic> haltData) async {
+    return true;
+  }
+
+  @override
+  Future<bool> deleteDindiHalt(String haltId) async {
+    return true;
+  }
+
+  @override
   Future<List<DindiMember>> getMembers(String dindiId) async {
     return _members.where((m) => m.dindiId == dindiId).toList();
   }

@@ -53,6 +53,24 @@ class MockCreateDindiRepository implements DindiRepository {
 
   @override
   Future<void> addAnnouncement(DindiAnnouncement announcement) async {}
+
+  @override
+  Future<bool> updateDindiLocation(
+    String dindiId, {
+    required double latitude,
+    required double longitude,
+    String? locationName,
+    String? currentHalt,
+  }) async => true;
+
+  @override
+  Future<bool> addDindiHalt(String dindiId, Map<String, dynamic> haltData) async => true;
+
+  @override
+  Future<bool> updateDindiHalt(String haltId, Map<String, dynamic> haltData) async => true;
+
+  @override
+  Future<bool> deleteDindiHalt(String haltId) async => true;
 }
 
 void main() {
@@ -68,7 +86,7 @@ void main() {
   });
 
   group('CreateDindiScreen Tests', () {
-    testWidgets('renders all required form fields and auto-generated join code',
+    testWidgets('renders all required application form fields and storage bucket upload cards',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -77,21 +95,21 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Create New Dindi'), findsOneWidget);
-      expect(find.textContaining('Registering as leader: Sanket Patil'),
+      expect(find.text('Dindi Registration Application'), findsOneWidget);
+      expect(find.textContaining('Submitting as leader: Sanket Patil'),
           findsOneWidget);
       expect(
           find.widgetWithText(TextFormField, 'Dindi Name *'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'Dindi Number / Sequence *'),
           findsOneWidget);
+      expect(find.text('Leader Profile Photo *'), findsOneWidget);
+      expect(find.text('Bucket: profile-images'), findsOneWidget);
+      expect(find.text('Registration Document *'), findsOneWidget);
+      expect(find.text('Bucket: dindi-documents'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'Origin *'), findsOneWidget);
       expect(
           find.widgetWithText(TextFormField, 'Destination *'), findsOneWidget);
-      expect(find.widgetWithText(TextFormField, 'Current Halt Location *'),
-          findsOneWidget);
-      expect(find.text('Road Status *'), findsOneWidget);
-      expect(find.text('Unique Join Code'), findsOneWidget);
-      expect(find.text('Register Dindi Procession'), findsOneWidget);
+      expect(find.text('Submit Dindi Registration Application'), findsOneWidget);
     });
 
     testWidgets('validates required fields before submission',
@@ -103,18 +121,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap submit with empty form
-      await tester.ensureVisible(find.text('Register Dindi Procession'));
-      await tester.tap(find.text('Register Dindi Procession'));
+      // Tap submit with empty required fields
+      await tester.ensureVisible(find.text('Submit Dindi Registration Application'));
+      await tester.tap(find.text('Submit Dindi Registration Application'));
       await tester.pumpAndSettle();
 
       expect(find.text('Please enter Dindi name'), findsOneWidget);
       expect(find.text('Please enter Dindi number'), findsOneWidget);
-      expect(find.text('Please enter current halt location'), findsOneWidget);
     });
 
     testWidgets(
-        'successful creation adds Dindi to state, selects it, and opens Dashboard',
+        'successful submission adds Dindi application to state, selects it, and opens Dashboard',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -132,23 +149,18 @@ void main() {
         find.widgetWithText(TextFormField, 'Dindi Number / Sequence *'),
         'SP-10',
       );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Current Halt Location *'),
-        'Saswad Palkhi Maidan',
-      );
 
       // Submit
-      await tester.ensureVisible(find.text('Register Dindi Procession'));
-      await tester.tap(find.text('Register Dindi Procession'));
+      await tester.ensureVisible(find.text('Submit Dindi Registration Application'));
+      await tester.tap(find.text('Submit Dindi Registration Application'));
       await tester.pumpAndSettle();
 
-      // Verify dashboard opened for the new Dindi
+      // Verify dashboard opened for the new Dindi application
       expect(find.byType(DindiDashboardScreen), findsOneWidget);
       expect(service.selectedDindiId,
           equals('00000000-0000-0000-0000-000000000099'));
       expect(find.text('Shree Sant Sopankaka Dindi'), findsOneWidget);
       expect(find.textContaining('Dindi No. SP-10'), findsOneWidget);
-      expect(find.text('Saswad Palkhi Maidan'), findsOneWidget);
     });
 
     testWidgets(
@@ -171,13 +183,9 @@ void main() {
         find.widgetWithText(TextFormField, 'Dindi Number / Sequence *'),
         '12',
       );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Current Halt Location *'),
-        'Akurdi',
-      );
 
-      await tester.ensureVisible(find.text('Register Dindi Procession'));
-      await tester.tap(find.text('Register Dindi Procession'));
+      await tester.ensureVisible(find.text('Submit Dindi Registration Application'));
+      await tester.tap(find.text('Submit Dindi Registration Application'));
       await tester.pumpAndSettle();
 
       // Verify remained on CreateDindiScreen

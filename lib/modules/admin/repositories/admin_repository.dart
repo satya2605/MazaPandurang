@@ -260,6 +260,33 @@ class AdminRepository {
     }
   }
 
+  Future<bool> addPalkhiHalt(String palkhiId, Map<String, dynamic> payload) async {
+    try {
+      final res = await _apiClient.post('/admin/palkhis/$palkhiId/halts', body: payload);
+      return res.statusCode == 201 || res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> updatePalkhiHalt(String haltId, Map<String, dynamic> payload) async {
+    try {
+      final res = await _apiClient.put('/admin/palkhi-halts/$haltId', body: payload);
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deletePalkhiHalt(String haltId) async {
+    try {
+      final res = await _apiClient.delete('/admin/palkhi-halts/$haltId');
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> deletePalkhi(String id) async {
     try {
       final res = await _apiClient.delete('/admin/palkhis/$id');

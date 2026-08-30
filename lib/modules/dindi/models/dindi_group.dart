@@ -1,3 +1,69 @@
+class DindiHalt {
+  final String id;
+  final String dindiId;
+  final int dayNumber;
+  final String haltDate;
+  final String locationName;
+  final double? approxLatitude;
+  final double? approxLongitude;
+  final String? nextDestination;
+  final String? expectedArrival;
+  final String? expectedDeparture;
+  final String? notes;
+
+  const DindiHalt({
+    required this.id,
+    required this.dindiId,
+    required this.dayNumber,
+    required this.haltDate,
+    required this.locationName,
+    this.approxLatitude,
+    this.approxLongitude,
+    this.nextDestination,
+    this.expectedArrival,
+    this.expectedDeparture,
+    this.notes,
+  });
+
+  factory DindiHalt.fromJson(Map<String, dynamic> json) {
+    return DindiHalt(
+      id: json['id']?.toString() ?? '',
+      dindiId: json['dindiId']?.toString() ?? json['dindi_id']?.toString() ?? '',
+      dayNumber: json['dayNumber'] != null
+          ? int.parse(json['dayNumber'].toString())
+          : (json['day_number'] != null ? int.parse(json['day_number'].toString()) : 1),
+      haltDate: json['haltDate']?.toString() ?? json['halt_date']?.toString() ?? '',
+      locationName: json['locationName']?.toString() ?? json['location_name']?.toString() ?? '',
+      approxLatitude: json['approxLatitude'] != null
+          ? double.tryParse(json['approxLatitude'].toString())
+          : (json['approx_latitude'] != null ? double.tryParse(json['approx_latitude'].toString()) : null),
+      approxLongitude: json['approxLongitude'] != null
+          ? double.tryParse(json['approxLongitude'].toString())
+          : (json['approx_longitude'] != null ? double.tryParse(json['approx_longitude'].toString()) : null),
+      nextDestination: json['nextDestination']?.toString() ?? json['next_destination']?.toString(),
+      expectedArrival: json['expectedArrival']?.toString() ?? json['expected_arrival']?.toString(),
+      expectedDeparture: json['expectedDeparture']?.toString() ?? json['expected_departure']?.toString(),
+      notes: json['notes']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'dindi_id': dindiId,
+      'day_number': dayNumber,
+      'halt_date': haltDate,
+      'location_name': locationName,
+      'approx_latitude': approxLatitude,
+      'approx_longitude': approxLongitude,
+      'next_destination': nextDestination,
+      'expected_arrival': expectedArrival,
+      'expected_departure': expectedDeparture,
+      'notes': notes,
+    };
+  }
+}
+
 class DindiGroup {
   final String id;
   final String name;
@@ -11,6 +77,9 @@ class DindiGroup {
   final String joinCode;
   final String leaderUserId;
   final String status;
+  final String documentUrl;
+  final String leaderImageUrl;
+  final List<DindiHalt> halts;
 
   const DindiGroup({
     required this.id,
@@ -25,9 +94,21 @@ class DindiGroup {
     required this.joinCode,
     this.leaderUserId = '00000000-0000-0000-0000-000000000002',
     this.status = 'Active',
+    this.documentUrl = '',
+    this.leaderImageUrl = '',
+    this.halts = const [],
   });
 
   factory DindiGroup.fromJson(Map<String, dynamic> json) {
+    var rawHalts = json['halts'];
+    List<DindiHalt> parsedHalts = [];
+    if (rawHalts is List) {
+      parsedHalts = rawHalts
+          .whereType<Map<String, dynamic>>()
+          .map((h) => DindiHalt.fromJson(h))
+          .toList();
+    }
+
     return DindiGroup(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -60,6 +141,13 @@ class DindiGroup {
       status: json['status']?.toString() ??
           json['currentStatus']?.toString() ??
           'Active',
+      documentUrl: json['documentUrl']?.toString() ??
+          json['document_url']?.toString() ??
+          '',
+      leaderImageUrl: json['leaderImageUrl']?.toString() ??
+          json['leader_image_url']?.toString() ??
+          '',
+      halts: parsedHalts,
     );
   }
 
@@ -76,6 +164,11 @@ class DindiGroup {
       'roadStatus': roadStatus,
       'joinCode': joinCode,
       'status': status,
+      'documentUrl': documentUrl,
+      'document_url': documentUrl,
+      'leaderImageUrl': leaderImageUrl,
+      'leader_image_url': leaderImageUrl,
+      'halts': halts.map((h) => h.toJson()).toList(),
     };
   }
 
@@ -92,6 +185,9 @@ class DindiGroup {
     String? joinCode,
     String? leaderUserId,
     String? status,
+    String? documentUrl,
+    String? leaderImageUrl,
+    List<DindiHalt>? halts,
   }) {
     return DindiGroup(
       id: id ?? this.id,
@@ -106,6 +202,9 @@ class DindiGroup {
       joinCode: joinCode ?? this.joinCode,
       leaderUserId: leaderUserId ?? this.leaderUserId,
       status: status ?? this.status,
+      documentUrl: documentUrl ?? this.documentUrl,
+      leaderImageUrl: leaderImageUrl ?? this.leaderImageUrl,
+      halts: halts ?? this.halts,
     );
   }
 }

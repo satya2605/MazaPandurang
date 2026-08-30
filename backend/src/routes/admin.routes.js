@@ -35,14 +35,19 @@ import {
   approvePoliceOfficer,
   rejectPoliceOfficer,
   suspendPoliceOfficer,
-  getAdminPalkhis,
-  getAdminPalkhiById,
-  createPalkhi,
-  updatePalkhi,
-  publishPalkhi,
-  unpublishPalkhi,
-  deletePalkhi,
 } from '../controllers/admin.controller.js';
+import {
+  getAllPalkhisAdmin,
+  getPalkhiByIdAdmin,
+  createPalkhiAdmin,
+  updatePalkhiAdmin,
+  publishPalkhiAdmin,
+  unpublishPalkhiAdmin,
+  deletePalkhiAdmin,
+  addPalkhiHaltAdmin,
+  updatePalkhiHaltAdmin,
+  deletePalkhiHaltAdmin,
+} from '../controllers/palkhi.controller.js';
 
 const router = Router();
 
@@ -54,13 +59,18 @@ router.get('/dashboard', getAdminDashboard);
 router.get('/audit-logs', getAdminAuditLogs);
 
 // Palkhi Moderation & Registry
-router.get('/palkhis', getAdminPalkhis);
-router.get('/palkhis/:id', getAdminPalkhiById);
-router.post('/palkhis', createPalkhi);
-router.patch('/palkhis/:id', updatePalkhi);
-router.patch('/palkhis/:id/publish', publishPalkhi);
-router.patch('/palkhis/:id/unpublish', unpublishPalkhi);
-router.delete('/palkhis/:id', deletePalkhi);
+router.get('/palkhis', getAllPalkhisAdmin);
+router.get('/palkhis/:id', getPalkhiByIdAdmin);
+router.post('/palkhis', createPalkhiAdmin);
+router.put('/palkhis/:id', updatePalkhiAdmin);
+router.patch('/palkhis/:id/publish', publishPalkhiAdmin);
+router.patch('/palkhis/:id/unpublish', unpublishPalkhiAdmin);
+router.delete('/palkhis/:id', deletePalkhiAdmin);
+
+// Multi-Day Planned Halt Management
+router.post('/palkhis/:id/halts', addPalkhiHaltAdmin);
+router.put('/palkhi-halts/:haltId', updatePalkhiHaltAdmin);
+router.delete('/palkhi-halts/:haltId', deletePalkhiHaltAdmin);
 
 // NGO Moderation
 router.get('/ngos', getAdminNgos);

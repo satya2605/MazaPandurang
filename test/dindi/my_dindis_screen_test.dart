@@ -63,6 +63,24 @@ class FakeDindiRepository implements DindiRepository {
 
   @override
   Future<void> addAnnouncement(DindiAnnouncement announcement) async {}
+
+  @override
+  Future<bool> updateDindiLocation(
+    String dindiId, {
+    required double latitude,
+    required double longitude,
+    String? locationName,
+    String? currentHalt,
+  }) async => true;
+
+  @override
+  Future<bool> addDindiHalt(String dindiId, Map<String, dynamic> haltData) async => true;
+
+  @override
+  Future<bool> updateDindiHalt(String haltId, Map<String, dynamic> haltData) async => true;
+
+  @override
+  Future<bool> deleteDindiHalt(String haltId) async => true;
 }
 
 void main() {
