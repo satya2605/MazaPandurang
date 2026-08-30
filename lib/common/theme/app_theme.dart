@@ -67,7 +67,9 @@ class AppTheme {
     );
 
     return baseTheme.copyWith(
-      textTheme: GoogleFonts.notoSansDevanagariTextTheme(baseTheme.textTheme),
+      textTheme: GoogleFonts.notoSansDevanagariTextTheme(baseTheme.textTheme).apply(
+        fontFamilyFallback: const ['Noto Sans Devanagari', 'Noto Color Emoji', 'Roboto', 'sans-serif'],
+      ),
     );
   }
 }
