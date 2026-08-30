@@ -133,6 +133,7 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
   }
 
   void _playTTS(String text) async {
+    if (!mounted) return;
     setState(() {
       _currentState = AiState.speaking;
       _statusText = 'वाचन सुरू आहे (Sarvam TTS)...';
@@ -142,12 +143,6 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
       final base64Audio = await widget.repository.synthesizeTTS(text);
       if (mounted && base64Audio != null && base64Audio.isNotEmpty) {
         playBase64Audio(base64Audio);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🔊 Sarvam AI मराठी आवाज प्ले होत आहे...'),
-            duration: Duration(seconds: 3),
-          ),
-        );
       }
     } catch (_) {}
 

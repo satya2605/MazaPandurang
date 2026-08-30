@@ -175,7 +175,6 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
-            tooltip: 'Open Menu',
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -193,12 +192,10 @@ class _PilgrimHomeScreenState extends State<PilgrimHomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Data',
             onPressed: () => _loadData(),
           ),
           IconButton(
             icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Profile',
             onPressed: () => PilgrimProfileModal.show(context),
           ),
         ],

@@ -119,11 +119,10 @@ export async function synthesizeSarvamTTS({ text, languageCode = 'mr-IN', speake
       target_language_code: languageCode,
       speaker: validSpeaker,
       model: 'bulbul:v3',
-      speech_sample_rate: 8000,
       enable_preprocessing: true
     };
 
-    console.log(`[SarvamTTS] Requesting TTS synthesis for ${text.trim().length} chars (speaker: ${validSpeaker}, model: bulbul:v3)`);
+    console.log(`[SarvamTTS] Requesting HD TTS synthesis for ${text.trim().length} chars (speaker: ${validSpeaker}, model: bulbul:v3)`);
 
     const res = await fetch('https://api.sarvam.ai/text-to-speech', {
       method: 'POST',
