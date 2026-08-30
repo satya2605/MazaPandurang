@@ -4,8 +4,26 @@ process.env.NO_LISTEN = 'true';
 import http from 'http';
 import app from './server.js';
 
+import { getSupabaseClient } from './db/supabase.js';
+
 let server;
 const PORT = 3009;
+
+async function seedTestPersonas() {
+  try {
+    const client = getSupabaseClient();
+    await client.from('profiles').upsert([
+      { id: '00000000-0000-0000-0000-000000000001', email: 'satyajit@mazapandurang.local', display_name: 'Satyajit (Pilgrim)', role: 'pilgrim', status: 'active' },
+      { id: '00000000-0000-0000-0000-000000000002', email: 'sanket@mazapandurang.local', display_name: 'Sanket (Dindi Leader)', role: 'dindi_leader', status: 'active' },
+      { id: '00000000-0000-0000-0000-000000000003', email: 'yogeshwari@mazapandurang.local', display_name: 'Yogeshwari (Police Authority)', role: 'police_authority', status: 'active' },
+      { id: '00000000-0000-0000-0000-000000000004', email: 'shrutika@mazapandurang.local', display_name: 'Shrutika (NGO Volunteer)', role: 'ngo_volunteer', status: 'active' },
+      { id: '00000000-0000-0000-0000-000000000005', email: 'gauri@mazapandurang.local', display_name: 'Gauri (Local Citizen)', role: 'local_citizen', status: 'active' },
+      { id: '00000000-0000-0000-0000-000000000006', email: 'admin@mazapandurang.local', display_name: 'Admin Control Plane', role: 'admin', status: 'active' }
+    ], { onConflict: 'id' });
+  } catch (e) {
+    // Ignore in offline test environment
+  }
+}
 
 function request(path, options = {}) {
   return new Promise((resolve, reject) => {
@@ -44,6 +62,7 @@ function request(path, options = {}) {
 async function runTestSuite() {
   console.log('🚀 Starting Master Platform API & Supabase Security Test Suite...');
   server = app.listen(PORT);
+  await seedTestPersonas();
 
   const pilgrimToken = { 'Authorization': 'Bearer test-jwt-00000000-0000-0000-0000-000000000001' };
   const dindiLeaderToken = { 'Authorization': 'Bearer test-jwt-00000000-0000-0000-0000-000000000002' };

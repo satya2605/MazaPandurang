@@ -58,6 +58,11 @@ class AppTheme {
           ),
         ),
       ),
+      tooltipTheme: const TooltipThemeData(
+        triggerMode: TooltipTriggerMode.tap,
+        waitDuration: Duration(milliseconds: 500),
+        showDuration: Duration(milliseconds: 1500),
+      ),
     );
   }
 }

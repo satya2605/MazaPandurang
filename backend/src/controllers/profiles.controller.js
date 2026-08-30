@@ -73,6 +73,31 @@ export async function updateProfile(req, res, next) {
         }, { onConflict: 'user_id' });
     }
 
+    // 3. If ngo_volunteer, ensure pending NGO application exists in ngos table
+    if (role === 'ngo_volunteer' || data?.role === 'ngo_volunteer') {
+      const { data: existingNgo } = await client
+        .from('ngos')
+        .select('id')
+        .eq('user_id', id)
+        .maybeSingle();
+
+      if (!existingNgo) {
+        const regNum = `NGO-MH-${id.substring(0, Math.min(8, id.length)).toUpperCase()}`;
+        await client.from('ngos').insert({
+          user_id: id,
+          name: `${display_name || data?.display_name || 'Seva'} Seva Mandal`,
+          registration_number: regNum,
+          contact_person: display_name || data?.display_name || 'NGO Representative',
+          phone: phone || data?.phone || '+91 9800000000',
+          email: email || data?.email || '',
+          primary_category: 'Food & Medical Seva',
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+
     res.json(data);
   } catch (err) {
     next(err);

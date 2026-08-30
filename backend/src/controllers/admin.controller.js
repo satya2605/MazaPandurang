@@ -111,6 +111,14 @@ export async function approveNgo(req, res, next) {
       .single();
 
     if (error) throw error;
+
+    if (data?.user_id) {
+      await client
+        .from('profiles')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', data.user_id);
+    }
+
     await recordAuditLog(req.adminUser?.id, 'APPROVE_NGO', 'ngo', id);
     res.json(data);
   } catch (err) {
@@ -132,6 +140,14 @@ export async function rejectNgo(req, res, next) {
       .single();
 
     if (error) throw error;
+
+    if (data?.user_id) {
+      await client
+        .from('profiles')
+        .update({ status: 'rejected', updated_at: new Date().toISOString() })
+        .eq('id', data.user_id);
+    }
+
     await recordAuditLog(req.adminUser?.id, 'REJECT_NGO', 'ngo', id, reason || 'Registration details unverified');
     res.json(data);
   } catch (err) {

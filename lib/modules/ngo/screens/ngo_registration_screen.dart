@@ -37,9 +37,10 @@ class _NgoRegistrationScreenState extends State<NgoRegistrationScreen> {
     super.dispose();
   }
 
-  void _submitRegistration() {
+  void _submitRegistration() async {
     if (_formKey.currentState!.validate()) {
-      NgoRepository().registerOrganization(
+      final repo = NgoRepository();
+      final success = await repo.registerOrganization(
         name: _nameController.text.trim(),
         registrationNo: _regNoController.text.trim(),
         contactPerson: _contactPersonController.text.trim(),
@@ -48,16 +49,26 @@ class _NgoRegistrationScreenState extends State<NgoRegistrationScreen> {
         primaryCategory: _selectedCategory,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Application submitted successfully. Waiting for Admin verification.'),
-          backgroundColor: Color(0xFFE65100),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      if (!mounted) return;
 
-      Navigator.of(context).pop();
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Application submitted successfully. Waiting for Admin verification.'),
+            backgroundColor: Color(0xFFE65100),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(repo.errorMessage ?? 'Submission failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
