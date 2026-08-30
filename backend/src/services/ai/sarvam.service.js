@@ -74,10 +74,10 @@ export async function transcribeSarvamSTT({ audioBuffer, mimeType = 'audio/wav',
 }
 
 /**
- * Perform Text-To-Speech synthesis using Sarvam AI (Bulbul:v1).
+ * Perform Text-To-Speech synthesis using Sarvam AI (Bulbul:v3).
  * Primary language: Marathi ('mr-IN').
  */
-export async function synthesizeSarvamTTS({ text, languageCode = 'mr-IN', speaker = 'meera', timeoutMs = 12000 }) {
+export async function synthesizeSarvamTTS({ text, languageCode = 'mr-IN', speaker = 'priya', timeoutMs = 12000 }) {
   const apiKey = process.env.SARVAM_API_KEY || config.sarvamApiKey;
 
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -106,17 +106,17 @@ export async function synthesizeSarvamTTS({ text, languageCode = 'mr-IN', speake
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const validSpeaker = (speaker && speaker !== 'meera') ? speaker : 'priya';
     const payload = {
       inputs: [text.trim()],
       target_language_code: languageCode,
-      speaker: speaker || 'meera',
-      pitch: 0,
-      pace: 1.05,
-      loudness: 1.5,
+      speaker: validSpeaker,
+      model: 'bulbul:v3',
       speech_sample_rate: 8000,
-      enable_preprocessing: true,
-      model: 'bulbul:v1'
+      enable_preprocessing: true
     };
+
+    console.log(`[SarvamTTS] Requesting TTS synthesis for ${text.trim().length} chars (speaker: ${validSpeaker}, model: bulbul:v3)`);
 
     const res = await fetch('https://api.sarvam.ai/text-to-speech', {
       method: 'POST',
@@ -131,7 +131,8 @@ export async function synthesizeSarvamTTS({ text, languageCode = 'mr-IN', speake
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      console.warn(`[SarvamTTS] API returned HTTP ${res.status}. Falling back to dev audio.`);
+      const errText = await res.text().catch(() => '');
+      console.warn(`[SarvamTTS] API returned HTTP ${res.status}: ${errText.substring(0, 150)}. Falling back to dev audio.`);
       return {
         success: true,
         audio: DEV_FALLBACK_AUDIO,
@@ -154,6 +155,7 @@ export async function synthesizeSarvamTTS({ text, languageCode = 'mr-IN', speake
       };
     }
 
+    console.log(`[SarvamTTS] Successfully synthesized audio payload (${base64Audio.length} base64 chars)`);
     return {
       success: true,
       audio: base64Audio,

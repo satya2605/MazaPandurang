@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../common/constants/app_colors.dart';
+import '../../../common/utils/audio_player_helper.dart';
 import '../models/pilgrim_models.dart';
 import '../repositories/pilgrim_repository.dart';
 
@@ -138,12 +139,13 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
     });
 
     try {
-      await widget.repository.synthesizeTTS(text);
-      if (mounted) {
+      final base64Audio = await widget.repository.synthesizeTTS(text);
+      if (mounted && base64Audio != null && base64Audio.isNotEmpty) {
+        playBase64Audio(base64Audio);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('🔊 Sarvam AI मराठी आवाज प्ले होत आहे...'),
-            duration: Duration(seconds: 2),
+            duration: Duration(seconds: 3),
           ),
         );
       }
