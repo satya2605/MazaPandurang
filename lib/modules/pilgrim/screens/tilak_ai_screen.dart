@@ -273,7 +273,6 @@ class _TilakAiScreenState extends State<TilakAiScreen> {
                     _currentState == AiState.listening ? Icons.mic : Icons.mic_none,
                     color: _currentState == AiState.listening ? Colors.red : AppColors.primary,
                   ),
-                  tooltip: 'मराठी आवाज शोध (Sarvam STT)',
                   onPressed: _handleVoiceRecording,
                 ),
                 Expanded(
