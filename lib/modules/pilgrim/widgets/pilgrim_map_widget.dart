@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../common/constants/app_colors.dart';
+import '../../admin/models/admin_models.dart' show PalkhiHalt;
 import '../models/pilgrim_models.dart';
 import '../repositories/pilgrim_repository.dart';
 import '../services/location_service.dart';
@@ -124,6 +125,141 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
     _addRouteLineAndMarkers();
   }
 
+  List<MapLocationEntity> _buildNormalizedLocationEntities() {
+    final List<MapLocationEntity> list = [];
+
+    // 1. Live Palkhi Locations
+    if (_effectivePalkhi != null) {
+      final p = _effectivePalkhi!;
+      list.add(
+        MapLocationEntity(
+          id: p.palkhiId,
+          type: MapLocationType.palkhiLive,
+          title: p.name,
+          subtitle: 'टप्पा: ${p.currentStage} • पुढील: ${p.nextStop}',
+          latitude: p.currentPosition.latitude,
+          longitude: p.currentPosition.longitude,
+          status: 'ACTIVE',
+          metadata: {'palkhi': p},
+        ),
+      );
+
+      // 2. Palkhi Planned Halts
+      for (final h in p.halts) {
+        if (h.approxLatitude != null && h.approxLongitude != null) {
+          list.add(
+            MapLocationEntity(
+              id: h.id,
+              type: MapLocationType.palkhiHalt,
+              title: '${h.locationName} (दिवस ${h.dayNumber})',
+              subtitle: 'तारीख: ${h.haltDate} • वेळ: ${h.expectedArrival ?? "दिवसभर"}',
+              latitude: h.approxLatitude!,
+              longitude: h.approxLongitude!,
+              status: 'PLANNED',
+              metadata: {'halt': h},
+            ),
+          );
+        }
+      }
+    }
+
+    // 3. Dindi Markers (Strict Architectural Separation: PALKHI ≠ DINDI)
+    for (final d in _effectiveDindis) {
+      list.add(
+        MapLocationEntity(
+          id: d.dindiId,
+          type: MapLocationType.dindi,
+          title: d.name,
+          subtitle: 'प्रमुख: ${d.leaderName} • सदस्य: ${d.memberCount}',
+          latitude: d.position.latitude,
+          longitude: d.position.longitude,
+          status: d.currentStatus,
+          metadata: {'dindi': d},
+        ),
+      );
+    }
+
+    // 4. Categorized Service Markers
+    for (final s in _effectiveServices) {
+      if (_effectiveCategoryFilter != null && s.category != _effectiveCategoryFilter) {
+        continue;
+      }
+      MapLocationType sType;
+      switch (s.category) {
+        case ServiceCategory.medical:
+          sType = MapLocationType.serviceMedical;
+          break;
+        case ServiceCategory.food:
+          sType = MapLocationType.serviceFood;
+          break;
+        case ServiceCategory.water:
+          sType = MapLocationType.serviceWater;
+          break;
+        case ServiceCategory.police:
+          sType = MapLocationType.servicePolice;
+          break;
+        case ServiceCategory.toilet:
+          sType = MapLocationType.serviceToilet;
+          break;
+        case ServiceCategory.shelter:
+          sType = MapLocationType.serviceShelter;
+          break;
+        default:
+          sType = MapLocationType.serviceOther;
+      }
+
+      list.add(
+        MapLocationEntity(
+          id: s.serviceId,
+          type: sType,
+          title: s.name,
+          subtitle: '${s.availabilityStatus} • ${s.address}',
+          latitude: s.position.latitude,
+          longitude: s.position.longitude,
+          status: s.availabilityStatus,
+          metadata: {'service': s},
+        ),
+      );
+    }
+
+    return list;
+  }
+
+  void _fitCameraToBounds(List<MapLocationEntity> entities) {
+    if (_mapController == null || entities.isEmpty) return;
+
+    double minLat = entities.first.latitude;
+    double maxLat = entities.first.latitude;
+    double minLng = entities.first.longitude;
+    double maxLng = entities.first.longitude;
+
+    for (final e in entities) {
+      if (e.latitude < minLat) minLat = e.latitude;
+      if (e.latitude > maxLat) maxLat = e.latitude;
+      if (e.longitude < minLng) minLng = e.longitude;
+      if (e.longitude > maxLng) maxLng = e.longitude;
+    }
+
+    if (minLat == maxLat && minLng == maxLng) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(minLat, minLng), 13.0),
+      );
+    } else {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(minLat, minLng),
+            northeast: LatLng(maxLat, maxLng),
+          ),
+          top: 90,
+          bottom: 90,
+          left: 40,
+          right: 40,
+        ),
+      );
+    }
+  }
+
   void _addRouteLineAndMarkers() async {
     if (_mapController == null) return;
 
@@ -151,6 +287,25 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
           lineOpacity: 0.85,
         ),
       );
+    }
+
+    final entities = _buildNormalizedLocationEntities();
+    for (final e in entities) {
+      await _mapController?.addSymbol(
+        SymbolOptions(
+          geometry: LatLng(e.latitude, e.longitude),
+          textField: e.title,
+          textOffset: const Offset(0, 0.8),
+          textSize: 11.0,
+          textColor: '#1E293B',
+          textHaloColor: '#FFFFFF',
+          textHaloWidth: 2.0,
+        ),
+      );
+    }
+
+    if (entities.isNotEmpty) {
+      _fitCameraToBounds(entities);
     }
   }
 
@@ -477,6 +632,13 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
             ),
           ),
 
+          // Map Legend & Marker Filter Indicators
+          Positioned(
+            left: 12,
+            bottom: 36,
+            child: _buildMapLegend(),
+          ),
+
           // Map Attribution (MapLibre + MapTiler / OpenStreetMap Data)
           Positioned(
             left: 12,
@@ -493,7 +655,171 @@ class _PilgrimMapWidgetState extends State<PilgrimMapWidget> {
               ),
             ),
           ),
+
+          // Interactive Overlay Markers (Renders cleanly over both MapLibre and Canvas basemaps)
+          Positioned.fill(
+            child: _buildInteractiveOverlayPins(_buildNormalizedLocationEntities()),
+          ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildInteractiveOverlayPins(List<MapLocationEntity> entities) {
+    if (entities.isEmpty) return const SizedBox.shrink();
+
+    const double minLat = 17.5;
+    const double maxLat = 19.5;
+    const double minLng = 73.5;
+    const double maxLng = 77.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          children: entities.map((e) {
+            final normY = (1.0 - (e.latitude - minLat) / (maxLat - minLat)).clamp(0.12, 0.82);
+            final normX = ((e.longitude - minLng) / (maxLng - minLng)).clamp(0.06, 0.90);
+
+            final posX = constraints.maxWidth * normX;
+            final posY = constraints.maxHeight * normY;
+
+            return Positioned(
+              left: posX - 16,
+              top: posY - 16,
+              child: GestureDetector(
+                onTap: () => _handleLocationTap(e),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: e.type.color,
+                        shape: BoxShape.circle,
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: Icon(e.type.icon, color: Colors.white, size: 16),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(230),
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+                      ),
+                      child: Text(
+                        e.title,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: e.type.color,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  void _handleLocationTap(MapLocationEntity entity) {
+    if (entity.type == MapLocationType.palkhiLive && entity.metadata['palkhi'] != null) {
+      MapMarkerCard.showPalkhiCard(
+        context: context,
+        palkhi: entity.metadata['palkhi'] as PalkhiInfo,
+        onTrackSelected: () {
+          if (widget.onPalkhiSelected != null) widget.onPalkhiSelected!();
+        },
+        onAskTilakSelected: () {
+          if (widget.onAskTilakPrompt != null) widget.onAskTilakPrompt!('Where is the Palkhi right now?');
+        },
+      );
+    } else if (entity.type == MapLocationType.palkhiHalt && entity.metadata['halt'] != null) {
+      MapMarkerCard.showPalkhiHaltCard(
+        context: context,
+        halt: entity.metadata['halt'] as PalkhiHalt,
+        onAskTilakSelected: () {
+          if (widget.onAskTilakPrompt != null) widget.onAskTilakPrompt!('Tell me about ${entity.title}');
+        },
+      );
+    } else if (entity.type == MapLocationType.dindi && entity.metadata['dindi'] != null) {
+      MapMarkerCard.showDindiCard(
+        context: context,
+        dindi: entity.metadata['dindi'] as DindiMarkerInfo,
+        onJoinSelected: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Joining Dindi: ${entity.title}')),
+          );
+        },
+      );
+    } else if (entity.metadata['service'] != null) {
+      final s = entity.metadata['service'] as WariService;
+      MapMarkerCard.showServiceCard(
+        context: context,
+        service: s,
+        distanceKm: _effectiveUserLocation != null ? s.position.distanceToInKm(_effectiveUserLocation!.position) : null,
+        onViewDetails: () {
+          if (widget.onServiceSelected != null) widget.onServiceSelected!(s);
+        },
+        onGetDirections: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Directions to ${s.name} (${s.address})')),
+          );
+        },
+      );
+    }
+  }
+
+  Widget _buildMapLegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(240),
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildLegendDot(MapLocationType.palkhiLive),
+          const SizedBox(width: 6),
+          _buildLegendDot(MapLocationType.palkhiHalt),
+          const SizedBox(width: 6),
+          _buildLegendDot(MapLocationType.dindi),
+          const SizedBox(width: 6),
+          _buildLegendDot(MapLocationType.serviceMedical),
+          const SizedBox(width: 6),
+          _buildLegendDot(MapLocationType.serviceWater),
+          const SizedBox(width: 6),
+          _buildLegendDot(MapLocationType.serviceFood),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendDot(MapLocationType type) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: type.color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 3),
+        Text(
+          type.label,
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+        ),
       ],
     );
   }

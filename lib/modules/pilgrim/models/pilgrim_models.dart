@@ -639,3 +639,126 @@ class EmergencyRequest {
     );
   }
 }
+
+/// Normalized classification of map markers.
+enum MapLocationType {
+  palkhiLive,
+  palkhiHalt,
+  dindi,
+  serviceMedical,
+  serviceFood,
+  serviceWater,
+  servicePolice,
+  serviceToilet,
+  serviceShelter,
+  serviceOther,
+  emergency,
+}
+
+extension MapLocationTypeExtension on MapLocationType {
+  String get label {
+    switch (this) {
+      case MapLocationType.palkhiLive:
+        return 'पालखी (Live)';
+      case MapLocationType.palkhiHalt:
+        return 'पालखी मुक्काम';
+      case MapLocationType.dindi:
+        return 'दिंडी';
+      case MapLocationType.serviceMedical:
+        return 'वैद्यकीय सेवा';
+      case MapLocationType.serviceFood:
+        return 'अन्नदान';
+      case MapLocationType.serviceWater:
+        return 'पिण्याचे पाणी';
+      case MapLocationType.servicePolice:
+        return 'पोलीस मदत';
+      case MapLocationType.serviceToilet:
+        return 'स्वच्छता गृह';
+      case MapLocationType.serviceShelter:
+        return 'विश्राम धाम';
+      case MapLocationType.serviceOther:
+        return 'इतर सेवा';
+      case MapLocationType.emergency:
+        return 'आणीबाणी मदत';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case MapLocationType.palkhiLive:
+        return Icons.flag_rounded;
+      case MapLocationType.palkhiHalt:
+        return Icons.signpost_rounded;
+      case MapLocationType.dindi:
+        return Icons.groups_rounded;
+      case MapLocationType.serviceMedical:
+        return Icons.local_hospital_rounded;
+      case MapLocationType.serviceFood:
+        return Icons.restaurant_rounded;
+      case MapLocationType.serviceWater:
+        return Icons.water_drop_rounded;
+      case MapLocationType.servicePolice:
+        return Icons.local_police_rounded;
+      case MapLocationType.serviceToilet:
+        return Icons.wc_rounded;
+      case MapLocationType.serviceShelter:
+        return Icons.night_shelter_rounded;
+      case MapLocationType.serviceOther:
+        return Icons.place_rounded;
+      case MapLocationType.emergency:
+        return Icons.warning_amber_rounded;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case MapLocationType.palkhiLive:
+        return const Color(0xFFE65100);
+      case MapLocationType.palkhiHalt:
+        return const Color(0xFFC2185B);
+      case MapLocationType.dindi:
+        return const Color(0xFF7B1FA2);
+      case MapLocationType.serviceMedical:
+        return const Color(0xFFD32F2F);
+      case MapLocationType.serviceFood:
+        return const Color(0xFFF57C00);
+      case MapLocationType.serviceWater:
+        return const Color(0xFF0288D1);
+      case MapLocationType.servicePolice:
+        return const Color(0xFF303F9F);
+      case MapLocationType.serviceToilet:
+        return const Color(0xFF00796B);
+      case MapLocationType.serviceShelter:
+        return const Color(0xFF5D4037);
+      case MapLocationType.serviceOther:
+        return const Color(0xFF455A64);
+      case MapLocationType.emergency:
+        return const Color(0xFFB71C1C);
+    }
+  }
+}
+
+/// Normalized Location Model for Map Rendering.
+class MapLocationEntity {
+  final String id;
+  final MapLocationType type;
+  final String title;
+  final String subtitle;
+  final double latitude;
+  final double longitude;
+  final String status;
+  final Map<String, dynamic> metadata;
+
+  const MapLocationEntity({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.subtitle,
+    required this.latitude,
+    required this.longitude,
+    required this.status,
+    this.metadata = const {},
+  });
+
+  WariLatLng get position => WariLatLng(latitude, longitude);
+}

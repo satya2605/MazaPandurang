@@ -25,7 +25,7 @@ class ApiPilgrimRepository implements PilgrimRepository {
   @override
   Future<List<PalkhiInfo>> getPalkhiList() async {
     try {
-      final response = await _apiClient.get('/palkhi').timeout(const Duration(milliseconds: 600));
+      final response = await _apiClient.get('/palkhi').timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);

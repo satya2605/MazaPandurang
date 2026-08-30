@@ -14,7 +14,8 @@ export async function getAllServices(req, res, next) {
       query = query.eq('is_verified', true);
     }
     if (category) {
-      query = query.eq('category', category);
+      const formattedCat = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+      query = query.eq('category', formattedCat);
     }
     if (status) {
       query = query.eq('availability_status', status);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../common/constants/app_colors.dart';
+import '../../admin/models/admin_models.dart' show PalkhiHalt;
 import '../models/pilgrim_models.dart';
 
 /// Modal Bottom Sheet helper displaying interactive marker cards.
@@ -282,6 +283,67 @@ class MapMarkerCard {
                     },
                     icon: const Icon(Icons.group_add, size: 18),
                     label: const Text('Join Dindi'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static void showPalkhiHaltCard({
+    required BuildContext context,
+    required PalkhiHalt halt,
+    required VoidCallback onAskTilakSelected,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.signpost_rounded, color: Color(0xFFC2185B), size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${halt.locationName} (दिवस ${halt.dayNumber})', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                      Text('तारीख: ${halt.haltDate}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                const Chip(
+                  label: Text('PLANNED HALT'),
+                  backgroundColor: Color(0xFFFCE4EC),
+                  labelStyle: TextStyle(color: Color(0xFFC2185B), fontWeight: FontWeight.bold, fontSize: 10),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            if (halt.expectedArrival != null) Text('🕒 Expected Arrival: ${halt.expectedArrival}', style: const TextStyle(fontSize: 14)),
+            if (halt.expectedDeparture != null) Text('🏁 Expected Departure: ${halt.expectedDeparture}', style: const TextStyle(fontSize: 14)),
+            if (halt.nextDestination != null) Text('🔜 Next Stop: ${halt.nextDestination}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      onAskTilakSelected();
+                    },
+                    icon: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
+                    label: const Text('Ask Tilak About Halt'),
                   ),
                 ),
               ],

@@ -35,7 +35,7 @@ export async function getPalkhiTracking(req, res, next) {
 
       const isAdmin = req.user && req.user.role === 'admin';
       if (!isAdmin) {
-        query = query.eq('is_published', true);
+        query = query.or('is_published.eq.true,is_published.is.null');
       }
 
       const { data, error } = await query;
