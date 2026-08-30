@@ -186,7 +186,26 @@ export async function getAdminServices(req, res, next) {
 
     const { data, error } = await query;
     if (error) throw error;
-    res.json(data || []);
+
+    const formatted = (data || []).map((item) => {
+      const catActive = item.category_details && typeof item.category_details === 'object'
+        ? item.category_details.is_active
+        : undefined;
+
+      const avail = (item.availability_status || '').toLowerCase();
+      const isAvailActive = avail === 'available' || avail === 'open 24/7' || avail === 'active';
+
+      const isActive = item.is_active !== undefined
+        ? item.is_active
+        : (catActive !== undefined ? catActive : isAvailActive);
+
+      return {
+        ...item,
+        is_active: isActive,
+      };
+    });
+
+    res.json(formatted);
   } catch (err) {
     next(err);
   }
@@ -206,7 +225,7 @@ export async function approveService(req, res, next) {
 
     if (error) throw error;
     await recordAuditLog(req.adminUser?.id, 'APPROVE_SERVICE', 'service', id);
-    res.json(data);
+    res.json({ ...data, is_active: data?.availability_status !== 'Inactive' && data?.availability_status !== 'Rejected' });
   } catch (err) {
     next(err);
   }
@@ -218,16 +237,32 @@ export async function rejectService(req, res, next) {
     const { reason } = req.body;
     const client = getSupabaseClient();
 
+    const { data: existing } = await client
+      .from('services')
+      .select('*')
+      .or(`id.eq.${id},service_id.eq.${id}`)
+      .maybeSingle();
+
+    const catDetails = existing?.category_details && typeof existing.category_details === 'object'
+      ? { ...existing.category_details }
+      : {};
+    catDetails.is_active = false;
+
     const { data, error } = await client
       .from('services')
-      .update({ is_verified: false, is_active: false, updated_at: new Date().toISOString() })
+      .update({
+        is_verified: false,
+        availability_status: 'Rejected',
+        category_details: catDetails,
+        updated_at: new Date().toISOString(),
+      })
       .or(`id.eq.${id},service_id.eq.${id}`)
       .select()
       .single();
 
     if (error) throw error;
     await recordAuditLog(req.adminUser?.id, 'REJECT_SERVICE', 'service', id, reason || 'Service unverified');
-    res.json(data);
+    res.json({ ...data, is_active: false });
   } catch (err) {
     next(err);
   }
@@ -238,16 +273,31 @@ export async function publishService(req, res, next) {
     const { id } = req.params;
     const client = getSupabaseClient();
 
+    const { data: existing } = await client
+      .from('services')
+      .select('*')
+      .or(`id.eq.${id},service_id.eq.${id}`)
+      .maybeSingle();
+
+    const catDetails = existing?.category_details && typeof existing.category_details === 'object'
+      ? { ...existing.category_details }
+      : {};
+    catDetails.is_active = true;
+
     const { data, error } = await client
       .from('services')
-      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .update({
+        availability_status: 'Available',
+        category_details: catDetails,
+        updated_at: new Date().toISOString(),
+      })
       .or(`id.eq.${id},service_id.eq.${id}`)
       .select()
       .single();
 
     if (error) throw error;
     await recordAuditLog(req.adminUser?.id, 'PUBLISH_SERVICE', 'service', id);
-    res.json(data);
+    res.json({ ...data, is_active: true });
   } catch (err) {
     next(err);
   }
@@ -258,16 +308,31 @@ export async function unpublishService(req, res, next) {
     const { id } = req.params;
     const client = getSupabaseClient();
 
+    const { data: existing } = await client
+      .from('services')
+      .select('*')
+      .or(`id.eq.${id},service_id.eq.${id}`)
+      .maybeSingle();
+
+    const catDetails = existing?.category_details && typeof existing.category_details === 'object'
+      ? { ...existing.category_details }
+      : {};
+    catDetails.is_active = false;
+
     const { data, error } = await client
       .from('services')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .update({
+        availability_status: 'Inactive',
+        category_details: catDetails,
+        updated_at: new Date().toISOString(),
+      })
       .or(`id.eq.${id},service_id.eq.${id}`)
       .select()
       .single();
 
     if (error) throw error;
     await recordAuditLog(req.adminUser?.id, 'UNPUBLISH_SERVICE', 'service', id);
-    res.json(data);
+    res.json({ ...data, is_active: false });
   } catch (err) {
     next(err);
   }

@@ -37,6 +37,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   String _serviceFilter = 'ALL';
   String _dindiLeaderFilter = 'ALL';
   String _userRoleFilter = 'ALL';
+  String _lostPersonFilter = 'ALL';
+  String _serviceReportFilter = 'ALL';
 
   @override
   void initState() {
@@ -410,61 +412,644 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   Widget _buildOverviewTab() {
     final stats = _stats;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final pendingCount = (stats?.pendingNgos ?? 0) +
+        (stats?.pendingServices ?? 0) +
+        (stats?.pendingDindiLeaders ?? 0) +
+        (stats?.pendingDindis ?? 0) +
+        (stats?.pendingLostPersonReports ?? 0);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        int gridColumns = 4;
+        double gridAspect = 2.1;
+
+        if (width < 600) {
+          gridColumns = 1;
+          gridAspect = 2.8;
+        } else if (width < 900) {
+          gridColumns = 2;
+          gridAspect = 1.75;
+        } else if (width < 1200) {
+          gridColumns = 3;
+          gridAspect = 1.85;
+        } else {
+          gridColumns = 4;
+          gridAspect = 2.05;
+        }
+
+        final isWideScreen = width >= 900;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. HERO MISSION CONTROL BANNER
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF311B92),
+                      const Color(0xFF4A148C),
+                      Colors.purple.shade800,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.purple.withAlpha(60),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade900.withAlpha(200),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.greenAccent.shade400, width: 1.2),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.greenAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'LIVE CONTROL ROOM',
+                                style: TextStyle(
+                                  color: Colors.greenAccent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        FilledButton.tonalIcon(
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Refresh Data'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white12,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          ),
+                          onPressed: _fetchAllData,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Wari Command & Mission Control',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Pandharpur Palkhi live tracking, safety moderation, NGO permissions & emergency management.',
+                      style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    // Quick Pill Counters
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildHeroStatPill(Icons.directions_bus, 'Palkhis', '${_palkhis.length}', Colors.amber),
+                        _buildHeroStatPill(Icons.groups, 'Dindis', '${_dindis.length}', Colors.lightBlueAccent),
+                        _buildHeroStatPill(Icons.medical_services, 'Seva Facilities', '${_services.length}', Colors.tealAccent),
+                        _buildHeroStatPill(Icons.people, 'Registered Users', '${_users.length}', Colors.pinkAccent),
+                        _buildHeroStatPill(Icons.history, 'Audit Events', '${_auditLogs.length}', Colors.purpleAccent),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 2. URGENT MODERATION TRIAGE STRIP (if any item is pending)
+              if (pendingCount > 0) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Action Required ($pendingCount Pending Submissions)',
+                            style: TextStyle(
+                              color: Colors.amber.shade900,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if ((stats?.pendingNgos ?? 0) > 0)
+                            ActionChip(
+                              avatar: const Icon(Icons.volunteer_activism, size: 16, color: Colors.orange),
+                              label: Text('${stats!.pendingNgos} Pending NGO Registration'),
+                              backgroundColor: Colors.white,
+                              onPressed: () {
+                                setState(() => _ngoFilter = 'PENDING');
+                                _tabController.animateTo(2);
+                              },
+                            ),
+                          if ((stats?.pendingServices ?? 0) > 0)
+                            ActionChip(
+                              avatar: const Icon(Icons.medical_services, size: 16, color: Colors.deepOrange),
+                              label: Text('${stats!.pendingServices} Unverified Facilities (Gate 1)'),
+                              backgroundColor: Colors.white,
+                              onPressed: () {
+                                setState(() => _serviceFilter = 'GATE1_PENDING');
+                                _tabController.animateTo(3);
+                              },
+                            ),
+                          if ((stats?.pendingDindiLeaders ?? 0) > 0)
+                            ActionChip(
+                              avatar: const Icon(Icons.person_add_alt_1, size: 16, color: Colors.blue),
+                              label: Text('${stats!.pendingDindiLeaders} Dindi Leader Applications'),
+                              backgroundColor: Colors.white,
+                              onPressed: () {
+                                setState(() => _dindiLeaderFilter = 'PENDING');
+                                _tabController.animateTo(4);
+                              },
+                            ),
+                          if ((stats?.pendingDindis ?? 0) > 0)
+                            ActionChip(
+                              avatar: const Icon(Icons.groups, size: 16, color: Colors.indigo),
+                              label: Text('${stats!.pendingDindis} Pending Dindi Groups'),
+                              backgroundColor: Colors.white,
+                              onPressed: () {
+                                _tabController.animateTo(4);
+                              },
+                            ),
+                          if ((stats?.pendingLostPersonReports ?? 0) > 0)
+                            ActionChip(
+                              avatar: const Icon(Icons.person_search, size: 16, color: Colors.red),
+                              label: Text('${stats!.pendingLostPersonReports} Lost Person Reports'),
+                              backgroundColor: Colors.white,
+                              onPressed: () {
+                                setState(() => _lostPersonFilter = 'PENDING');
+                                _tabController.animateTo(5);
+                              },
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // 3. SECTION TITLE
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'System Metrics & Moderation Gates',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+                  ),
+                  Text(
+                    'Tap any metric to review',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // 4. RESPONSIVE METRIC CARDS GRID
+              GridView.count(
+                crossAxisCount: gridColumns,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: gridAspect,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildModernStatCard(
+                    title: 'Pending NGOs',
+                    subtitle: 'Awaiting organization vetting',
+                    value: '${stats?.pendingNgos ?? 0}',
+                    icon: Icons.volunteer_activism,
+                    color: Colors.orange.shade700,
+                    targetTabIndex: 2,
+                    onFilter: () => setState(() => _ngoFilter = 'PENDING'),
+                  ),
+                  _buildModernStatCard(
+                    title: 'Gate 1 Services',
+                    subtitle: 'Medical, water & food camps',
+                    value: '${stats?.pendingServices ?? 0}',
+                    icon: Icons.medical_services,
+                    color: Colors.deepOrange,
+                    targetTabIndex: 3,
+                    onFilter: () => setState(() => _serviceFilter = 'GATE1_PENDING'),
+                  ),
+                  _buildModernStatCard(
+                    title: 'Dindi Leaders',
+                    subtitle: 'Leader ID badge verification',
+                    value: '${stats?.pendingDindiLeaders ?? 0}',
+                    icon: Icons.person_add_alt_1,
+                    color: Colors.blue.shade700,
+                    targetTabIndex: 4,
+                    onFilter: () => setState(() => _dindiLeaderFilter = 'PENDING'),
+                  ),
+                  _buildModernStatCard(
+                    title: 'Dindi Troupes',
+                    subtitle: 'Troupe registry applications',
+                    value: '${stats?.pendingDindis ?? 0}',
+                    icon: Icons.groups_3,
+                    color: Colors.indigo.shade600,
+                    targetTabIndex: 4,
+                  ),
+                  _buildModernStatCard(
+                    title: 'Lost Persons',
+                    subtitle: 'Missing reports awaiting approval',
+                    value: '${stats?.pendingLostPersonReports ?? 0}',
+                    icon: Icons.person_search,
+                    color: Colors.red.shade700,
+                    targetTabIndex: 5,
+                    onFilter: () => setState(() => _lostPersonFilter = 'PENDING'),
+                  ),
+                  _buildModernStatCard(
+                    title: 'Service Reports',
+                    subtitle: 'Facility complaints & issues',
+                    value: '${stats?.openServiceReports ?? 0}',
+                    icon: Icons.report_problem,
+                    color: Colors.amber.shade800,
+                    targetTabIndex: 6,
+                    onFilter: () => setState(() => _serviceReportFilter = 'PENDING'),
+                  ),
+                  _buildModernStatCard(
+                    title: 'SOS Emergencies',
+                    subtitle: 'Active field dispatches',
+                    value: '${stats?.activeEmergencies ?? 0}',
+                    icon: Icons.emergency,
+                    color: Colors.purple.shade700,
+                    targetTabIndex: 0,
+                  ),
+                  _buildModernStatCard(
+                    title: 'Traffic Alerts',
+                    subtitle: 'Active diversions & ghat delays',
+                    value: '${stats?.activeTrafficAlerts ?? 0}',
+                    icon: Icons.traffic,
+                    color: Colors.teal.shade700,
+                    targetTabIndex: 0,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // 5. RECENT ACTIVITY & QUICK ACTIONS ROW
+              if (isWideScreen)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: _buildRecentAuditLogsSection()),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 2, child: _buildQuickOperationsSection()),
+                  ],
+                )
+              else ...[
+                _buildRecentAuditLogsSection(),
+                const SizedBox(height: 16),
+                _buildQuickOperationsSection(),
+              ],
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeroStatPill(IconData icon, String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(22),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withAlpha(40)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Live System Governance Metrics', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchAllData),
-            ],
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              _buildStatCard('Pending NGOs', '${stats?.pendingNgos ?? 0}', Colors.orange, 1, onFilter: () => setState(() => _ngoFilter = 'PENDING')),
-              _buildStatCard('Pending Services', '${stats?.pendingServices ?? 0}', Colors.deepOrange, 2, onFilter: () => setState(() => _serviceFilter = 'GATE1_PENDING')),
-              _buildStatCard('Pending Dindi Leaders', '${stats?.pendingDindiLeaders ?? 0}', Colors.blue, 3, onFilter: () => setState(() => _dindiLeaderFilter = 'PENDING')),
-              _buildStatCard('Pending Dindis', '${stats?.pendingDindis ?? 0}', Colors.indigo, 3, onFilter: () => setState(() => _dindiLeaderFilter = 'PENDING')),
-              _buildStatCard('Lost Person Cases', '${stats?.pendingLostPersonReports ?? 0}', Colors.red, 4),
-              _buildStatCard('Service Reports', '${stats?.openServiceReports ?? 0}', Colors.amber, 5),
-              _buildStatCard('Active Emergencies', '${stats?.activeEmergencies ?? 0}', Colors.purple, 0),
-              _buildStatCard('Active Traffic Alerts', '${stats?.activeTrafficAlerts ?? 0}', Colors.teal, 0),
-            ],
-          ),
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text('$label: ', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, int targetTabIndex, {VoidCallback? onFilter}) {
-    return InkWell(
-      onTap: () {
-        if (onFilter != null) onFilter();
-        _tabController.animateTo(targetTabIndex);
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withAlpha(80)),
+  Widget _buildModernStatCard({
+    required String title,
+    required String subtitle,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required int targetTabIndex,
+    VoidCallback? onFilter,
+  }) {
+    final int count = int.tryParse(value) ?? 0;
+    final bool hasPending = count > 0;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: hasPending ? color.withAlpha(120) : Colors.grey.shade200, width: hasPending ? 1.4 : 1),
+      ),
+      color: hasPending ? color.withAlpha(12) : Colors.white,
+      child: InkWell(
+        onTap: () {
+          if (onFilter != null) onFilter();
+          _tabController.animateTo(targetTabIndex);
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(30),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: hasPending ? color : Colors.black87,
+                            height: 1.1,
+                          ),
+                        ),
+                        if (hasPending) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: color.withAlpha(30),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Review',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRecentAuditLogsSection() {
+    final recent = _auditLogs.take(4).toList();
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color)),
-            const SizedBox(height: 4),
-            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.history_toggle_off, color: Colors.purple.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    const Text('Recent Admin Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => _tabController.animateTo(8),
+                  child: const Text('View All (Tab 9)', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (recent.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Text('No audit events recorded yet.', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: recent.length,
+                separatorBuilder: (ctx, i) => const Divider(height: 12),
+                itemBuilder: (ctx, i) {
+                  final log = recent[i];
+                  return Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.shield_outlined, size: 16, color: Colors.purple.shade700),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              log.action.replaceAll('_', ' '),
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            Text(
+                              'Target: ${log.targetType} • Admin: ${log.adminEmail.isNotEmpty ? log.adminEmail : 'System'}',
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        log.createdAt.isNotEmpty ? log.createdAt.substring(0, log.createdAt.indexOf('T') > 0 ? log.createdAt.indexOf('T') : log.createdAt.length) : '',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                      ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickOperationsSection() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bolt, color: Colors.amber.shade800, size: 20),
+                const SizedBox(width: 8),
+                const Text('Mission Shortcuts', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ],
+            ),
+            const Divider(height: 16),
+            _buildShortcutTile(
+              icon: Icons.add_road,
+              title: 'Register New Palkhi Procession',
+              subtitle: 'Add route, days & operator assignments',
+              color: Colors.purple.shade700,
+              onTap: _showCreatePalkhiDialog,
+            ),
+            const SizedBox(height: 8),
+            _buildShortcutTile(
+              icon: Icons.published_with_changes,
+              title: '2-Gate Service Moderation',
+              subtitle: 'Verify camps & publish to pilgrims',
+              color: Colors.teal.shade700,
+              onTap: () => _tabController.animateTo(3),
+            ),
+            const SizedBox(height: 8),
+            _buildShortcutTile(
+              icon: Icons.badge_outlined,
+              title: 'Dindi Leader Verification',
+              subtitle: 'Moderate troupe leaders & members',
+              color: Colors.blue.shade700,
+              onTap: () => _tabController.animateTo(4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShortcutTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withAlpha(12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withAlpha(40)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                  Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 11)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 12, color: color),
           ],
         ),
       ),
@@ -943,63 +1528,123 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildLostPersonsTab() {
-    if (_lostPersons.isEmpty) return const Center(child: Text('No missing person cases found.'));
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _lostPersons.length,
-      itemBuilder: (context, i) {
-        final lp = _lostPersons[i];
-        final isApproved = lp.isApprovedByAdmin;
-        final isClosed = lp.status.toLowerCase() == 'found' || lp.status.toLowerCase() == 'closed';
+    final filtered = _lostPersons.where((lp) {
+      if (_lostPersonFilter == 'ALL') return true;
+      if (_lostPersonFilter == 'PENDING') return !lp.isApprovedByAdmin;
+      if (_lostPersonFilter == 'APPROVED') return lp.isApprovedByAdmin;
+      return true;
+    }).toList();
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            title: Text(lp.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Age: ${lp.age} | Gender: ${lp.gender}\nLast Seen: ${lp.lastSeenLocation}\nApproved Broadcast: $isApproved | Status: ${lp.status.toUpperCase()}'),
-            isThreeLine: true,
-            trailing: Wrap(
-              spacing: 6,
-              children: [
-                if (!isApproved && !isClosed)
-                  ElevatedButton(
-                    onPressed: () => _handleLostPersonApprove(lp.id),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    child: const Text('Approve Broadcast', style: TextStyle(fontSize: 11)),
-                  ),
-                if (!isClosed)
-                  OutlinedButton(
-                    onPressed: () => _handleLostPersonClose(lp.id),
-                    child: const Text('Close (Found)', style: TextStyle(fontSize: 11)),
-                  ),
-              ],
-            ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              const Text('Filter Cases: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              DropdownButton<String>(
+                value: _lostPersonFilter,
+                items: const [
+                  DropdownMenuItem(value: 'ALL', child: Text('All Cases')),
+                  DropdownMenuItem(value: 'PENDING', child: Text('Pending Approval')),
+                  DropdownMenuItem(value: 'APPROVED', child: Text('Approved / Broadcasted')),
+                ],
+                onChanged: (v) => setState(() => _lostPersonFilter = v!),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? const Center(child: Text('No missing person cases found.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, i) {
+                    final lp = filtered[i];
+                    final isApproved = lp.isApprovedByAdmin;
+                    final isClosed = lp.status.toLowerCase() == 'found' || lp.status.toLowerCase() == 'closed';
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text(lp.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('Age: ${lp.age} | Gender: ${lp.gender}\nLast Seen: ${lp.lastSeenLocation}\nApproved Broadcast: $isApproved | Status: ${lp.status.toUpperCase()}'),
+                        isThreeLine: true,
+                        trailing: Wrap(
+                          spacing: 6,
+                          children: [
+                            if (!isApproved && !isClosed)
+                              ElevatedButton(
+                                onPressed: () => _handleLostPersonApprove(lp.id),
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                child: const Text('Approve Broadcast', style: TextStyle(fontSize: 11)),
+                              ),
+                            if (!isClosed)
+                              OutlinedButton(
+                                onPressed: () => _handleLostPersonClose(lp.id),
+                                child: const Text('Close (Found)', style: TextStyle(fontSize: 11)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
   Widget _buildServiceReportsTab() {
-    if (_serviceReports.isEmpty) return const Center(child: Text('No service reports submitted.'));
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _serviceReports.length,
-      itemBuilder: (context, i) {
-        final rpt = _serviceReports[i];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            title: Text('${rpt.issueType} — ${rpt.serviceName}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Reporter: ${rpt.reporterName}\nDescription: ${rpt.description}\nAdmin Notes: ${rpt.adminNotes}'),
-            isThreeLine: true,
-            trailing: Chip(
-              label: Text(rpt.status.toUpperCase()),
-              backgroundColor: rpt.status == 'resolved' ? Colors.green.shade100 : Colors.amber.shade100,
-            ),
+    final filtered = _serviceReports.where((rpt) {
+      if (_serviceReportFilter == 'ALL') return true;
+      return rpt.status.toUpperCase() == _serviceReportFilter;
+    }).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              const Text('Filter Reports: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              DropdownButton<String>(
+                value: _serviceReportFilter,
+                items: const [
+                  DropdownMenuItem(value: 'ALL', child: Text('All Reports')),
+                  DropdownMenuItem(value: 'PENDING', child: Text('Pending Review')),
+                  DropdownMenuItem(value: 'RESOLVED', child: Text('Resolved')),
+                ],
+                onChanged: (v) => setState(() => _serviceReportFilter = v!),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? const Center(child: Text('No service reports submitted.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, i) {
+                    final rpt = filtered[i];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text('${rpt.issueType} — ${rpt.serviceName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('Reporter: ${rpt.reporterName}\nDescription: ${rpt.description}\nAdmin Notes: ${rpt.adminNotes}'),
+                        isThreeLine: true,
+                        trailing: Chip(
+                          label: Text(rpt.status.toUpperCase()),
+                          backgroundColor: rpt.status == 'resolved' ? Colors.green.shade100 : Colors.amber.shade100,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 

@@ -110,6 +110,13 @@ class AdminService {
   });
 
   factory AdminService.fromJson(Map<String, dynamic> json) {
+    final catDetails = json['category_details'];
+    final bool catActive = catDetails is Map && catDetails['is_active'] == true;
+    final String avail = json['availability_status']?.toString().toLowerCase() ?? '';
+    final bool isAvailActive = avail == 'available' || avail == 'open 24/7' || avail == 'active';
+
+    final bool isActive = json['is_active'] == true || catActive || (json['is_active'] == null && isAvailActive);
+
     return AdminService(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Service',
@@ -117,7 +124,7 @@ class AdminService {
       address: json['address']?.toString() ?? '',
       providerName: json['provider_name']?.toString() ?? json['ngos']?['name']?.toString() ?? 'Provider',
       isVerified: json['is_verified'] == true,
-      isActive: json['is_active'] == true,
+      isActive: isActive,
       availabilityStatus: json['availability_status']?.toString() ?? json['availabilityStatus']?.toString() ?? 'Open 24/7',
       contactPhone: json['contact_phone']?.toString() ?? json['contactPhone']?.toString() ?? '',
     );
