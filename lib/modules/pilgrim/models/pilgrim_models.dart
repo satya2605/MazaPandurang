@@ -337,9 +337,17 @@ class TilakChatMessage {
 
     final firstAction = actionsList.isNotEmpty ? actionsList.first : null;
 
+    final rawText = json['message']?.toString() ??
+        json['reply']?.toString() ??
+        json['text']?.toString();
+
+    final parsedText = (rawText != null && rawText.trim().isNotEmpty)
+        ? rawText.trim()
+        : 'क्षमस्व, सध्या उत्तर मिळू शकले नाही. कृपया पुन्हा प्रयत्न करा.';
+
     return TilakChatMessage(
       id: json['id']?.toString() ?? 'MSG-AI-${DateTime.now().millisecondsSinceEpoch}',
-      text: json['reply']?.toString() ?? json['text']?.toString() ?? 'Ram Krishna Hari!',
+      text: parsedText,
       isUser: false,
       timestamp: DateTime.now(),
       intent: json['intent']?.toString(),

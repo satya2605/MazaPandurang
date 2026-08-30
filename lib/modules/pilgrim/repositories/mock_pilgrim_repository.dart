@@ -484,6 +484,7 @@ class MockPilgrimRepository implements PilgrimRepository {
 
     if (lower.contains('palkhi') ||
         lower.contains('location') ||
+        lower.contains('पालखी') ||
         lower.contains('स्थान')) {
       answer =
           'Sant Dnyaneshwar Maharaj Palkhi is currently at Saswad (सासवड मुक्काम). The next stop is Jejuri.';
@@ -491,6 +492,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       actionText = 'View Palkhi Route';
     } else if (lower.contains('medical') ||
         lower.contains('doctor') ||
+        lower.contains('वैद्यकीय') ||
         lower.contains('औषध')) {
       answer =
           'The nearest medical facility is Saswad Central Medical Camp (SRV-MED-001) near Saswad Bus Stand. Open 24/7.';
@@ -502,7 +504,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       targetRoute = '/dindi';
       actionText = 'View Nearby Dindis';
     } else if (lower.contains('water') ||
-        lower.contains('पानी') ||
+        lower.contains('पाणी') ||
         lower.contains('जल')) {
       answer =
           'Clean Jal Seva Tank 1 (SRV-WTR-002) is located at the Dive Ghat Exit Point.';
@@ -510,7 +512,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       actionText = 'Locate Water Points';
     } else {
       answer =
-          'Jay Jay Ram Krishna Hari! I am Tilak, your Wari AI guide. How can I help you navigate services, Palkhi locations, or emergency assistance today?';
+          'राम कृष्ण हरी! 🚩 मी तिलक, आपला वारी मार्गदर्शक आहे. पालखी मार्ग, मुक्काम, वैद्यकीय मदत, पिण्याचे पाणी किंवा आपत्कालीन सेवांबाबत प्रश्न विचारा.';
     }
 
     return TilakChatMessage(

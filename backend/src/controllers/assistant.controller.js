@@ -15,14 +15,20 @@ export async function handleAssistantChat(req, res, next) {
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Message string parameter is required' }
+        error: { message: 'माहितीसाठी कृपया वैध प्रश्न टाका.' },
+        message: 'माहितीसाठी कृपया वैध प्रश्न टाका.',
+        reply: 'माहितीसाठी कृपया वैध प्रश्न टाका.',
+        text: 'माहितीसाठी कृपया वैध प्रश्न टाका.'
       });
     }
 
     if (message.length > 2000) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Message length exceeds maximum limit of 2000 characters' }
+        error: { message: 'प्रश्न खूप मोठा आहे. कृपया लहान रूपात विचारा.' },
+        message: 'प्रश्न खूप मोठा आहे. कृपया लहान रूपात विचारा.',
+        reply: 'प्रश्न खूप मोठा आहे. कृपया लहान रूपात विचारा.',
+        text: 'प्रश्न खूप मोठा आहे. कृपया लहान रूपात विचारा.'
       });
     }
 
@@ -32,10 +38,10 @@ export async function handleAssistantChat(req, res, next) {
       userLocation: userContext || {}
     });
 
-    // 1. Attempt Grok API completion
-    let grokRes = null;
+    // 1. Attempt LLM API completion (Grok / Groq / OpenAI)
+    let llmRes = null;
     try {
-      grokRes = await sendGrokChatCompletion({
+      llmRes = await sendGrokChatCompletion({
         systemPrompt: SYSTEM_PROMPT,
         userMessage: message.trim(),
         context: trustedContext
@@ -44,22 +50,29 @@ export async function handleAssistantChat(req, res, next) {
       if (err.statusCode) {
         return res.status(err.statusCode).json({
           success: false,
-          error: { message: err.message }
+          error: { message: 'सध्या नेटवर्क वेळेत प्रतिसाद मिळाला नाही. कृपया पुन्हा प्रयत्न करा.' },
+          message: 'सध्या नेटवर्क वेळेत प्रतिसाद मिळाला नाही. कृपया पुन्हा प्रयत्न करा.',
+          reply: 'सध्या नेटवर्क वेळेत प्रतिसाद मिळाला नाही. कृपया पुन्हा प्रयत्न करा.',
+          text: 'सध्या नेटवर्क वेळेत प्रतिसाद मिळाला नाही. कृपया पुन्हा प्रयत्न करा.'
         });
       }
     }
 
-    if (grokRes && grokRes.reply) {
+    if (llmRes && llmRes.reply && llmRes.reply.trim().length > 0) {
+      const answer = llmRes.reply.trim();
       return res.json({
         success: true,
-        message: grokRes.reply,
+        message: answer,
+        reply: answer,
+        text: answer,
         language: 'mr',
-        provider: 'grok',
+        provider: llmRes.provider || 'llm',
         sources: ['palkhi', 'services', 'wari_route']
       });
     }
 
-    // 2. Fallback to local dev engine if Grok API key is unconfigured or unavailable
+    // 2. Fallback to grounded local dev engine if LLM API fails or is unconfigured
+    console.log('[AssistantController] LLM API unconfigured or unreachable. Using grounded Dev engine.');
     const devProvider = new DevAIProvider();
     const devRes = await devProvider.generateResponse({
       systemPrompt: SYSTEM_PROMPT,
@@ -68,12 +81,17 @@ export async function handleAssistantChat(req, res, next) {
       intent: 'general'
     });
 
+    const devAnswer = devRes?.reply || 'क्षमस्व, सध्या या प्रश्नाचे उत्तर उपलब्ध नाही.';
+
     return res.json({
       success: true,
-      message: devRes.reply,
+      message: devAnswer,
+      reply: devAnswer,
+      text: devAnswer,
       language: 'mr',
-      provider: 'dev-fallback',
-      sources: devRes.sources || ['palkhi']
+      provider: 'dev-grounded',
+      actions: devRes?.actions || [],
+      sources: devRes?.sources || ['palkhi']
     });
   } catch (err) {
     next(err);
@@ -100,14 +118,14 @@ export async function handleAssistantSTT(req, res, next) {
     if (!audioBuffer || audioBuffer.length === 0) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Audio file upload or base64 audio string is required' }
+        error: { message: 'ध्वनी नोंदणी फाईल आवश्यक आहे.' }
       });
     }
 
     if (audioBuffer.length > 10 * 1024 * 1024) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Audio payload size exceeds maximum limit of 10MB' }
+        error: { message: 'ध्वनी फाईल आकार १०MB पेक्षा लहान असणे आवश्यक आहे.' }
       });
     }
 
@@ -141,14 +159,14 @@ export async function handleAssistantTTS(req, res, next) {
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Text parameter is required for TTS' }
+        error: { message: 'वाचनासाठी मजकूर आवश्यक आहे.' }
       });
     }
 
     if (text.length > 1000) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Text length exceeds maximum limit of 1000 characters' }
+        error: { message: 'मजकूर १००० अक्षरांपेक्षा लहान असणे आवश्यक आहे.' }
       });
     }
 
@@ -172,7 +190,7 @@ export async function handleAssistantTTS(req, res, next) {
 
 /**
  * Controller for POST /api/assistant/voice
- * One-shot voice assistant endpoint (STT ➔ Grok ➔ TTS).
+ * One-shot voice assistant endpoint (STT ➔ LLM ➔ TTS).
  */
 export async function handleAssistantVoice(req, res, next) {
   try {
@@ -190,7 +208,7 @@ export async function handleAssistantVoice(req, res, next) {
     if (!audioBuffer || audioBuffer.length === 0) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Audio file upload or base64 audio string is required' }
+        error: { message: 'ध्वनी नोंदणी फाईल आवश्यक आहे.' }
       });
     }
 
@@ -201,16 +219,16 @@ export async function handleAssistantVoice(req, res, next) {
     // 2. Build trusted platform context
     const trustedContext = await buildTrustedAssistantContext({ userId: req.user?.id });
 
-    // 3. Query LLM (Grok or Dev Fallback)
-    let replyText = "राम कृष्ण हरी! 🚩 पालखी सध्या पुणे मार्गावर आहे.";
-    const grokRes = await sendGrokChatCompletion({
+    // 3. Query LLM (Groq / Grok / Dev Fallback)
+    let replyText = "पालखी सध्या पुणे मार्गावर आहे.";
+    const llmRes = await sendGrokChatCompletion({
       systemPrompt: SYSTEM_PROMPT,
       userMessage: transcript,
       context: trustedContext
     }).catch(() => null);
 
-    if (grokRes && grokRes.reply) {
-      replyText = grokRes.reply;
+    if (llmRes && llmRes.reply) {
+      replyText = llmRes.reply;
     } else {
       const devProvider = new DevAIProvider();
       const devRes = await devProvider.generateResponse({
@@ -229,6 +247,8 @@ export async function handleAssistantVoice(req, res, next) {
       success: true,
       transcript: transcript,
       message: replyText,
+      reply: replyText,
+      text: replyText,
       language: 'mr',
       audio: ttsRes?.audio || null,
       format: ttsRes?.format || 'wav'
