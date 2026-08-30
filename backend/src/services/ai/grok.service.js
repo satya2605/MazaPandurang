@@ -73,8 +73,52 @@ export async function sendGrokChatCompletion({ systemPrompt, userMessage, contex
 
     if (replyText && replyText.trim().length > 0) {
       console.log(`[LLMService] Successfully received response (${replyText.trim().length} chars)`);
+
+      let parsedJson = null;
+      try {
+        const cleanJsonText = replyText.trim().replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+        parsedJson = JSON.parse(cleanJsonText);
+      } catch (_) {}
+
+      let reply = parsedJson?.reply || replyText.trim();
+      let actions = parsedJson?.actions || [];
+
+      // STRICT SANITIZATION: If LLM output a markdown table or multiple list items,
+      // override with the single nearest service relative to Saswad center!
+      if (reply.includes('|') || reply.includes('----') || (reply.match(/\n/g) || []).length > 4) {
+        console.log('[LLMService] Sanitizing table/list response to single nearest service');
+        const userLoc = context.user_location || { latitude: 18.3411, longitude: 74.0305, name: 'सासवड मध्यवर्ती केंद्र' };
+
+        let filterCat = 'water';
+        const msgLower = (userMessage || '').toLowerCase();
+        if (msgLower.includes('medical') || msgLower.includes('वैद्यकीय') || msgLower.includes('दवाखाना')) filterCat = 'medical';
+        else if (msgLower.includes('food') || msgLower.includes('अन्नछत्र') || msgLower.includes('जेवण')) filterCat = 'food';
+        else if (msgLower.includes('toilet') || msgLower.includes('स्वच्छता') || msgLower.includes('टॉयलेट')) filterCat = 'toilet';
+        else if (msgLower.includes('shelter') || msgLower.includes('विश्राम') || msgLower.includes('मुक्काम')) filterCat = 'shelter';
+
+        const services = context.services || [];
+        const matched = services.filter(s => (s.category || '').toLowerCase() === filterCat);
+        const nearest = matched.length > 0 ? matched[0] : (services.length > 0 ? services[0] : null);
+
+        if (nearest) {
+          reply = `राम कृष्ण हरी! 🚩 सासवड मध्यवर्ती केंद्रापासून (Saswad Center) सर्वात जवळील सुविधा:\n\n📍 "${nearest.name}"\n• अंतर: ${nearest.dist_from_saswad_km} किमी (${nearest.address})\n• स्थिती: ${nearest.availability_status || 'Available'}\n\nथेट नेव्हिगेशन सुरू करण्यासाठी खालील बटणावर क्लिक करा.`;
+          actions = [
+            {
+              type: 'directions',
+              id: nearest.id,
+              label: `🧭 Start Navigation (${nearest.name})`,
+              targetRoute: `/map?lat=${nearest.latitude}&lng=${nearest.longitude}&title=${encodeURIComponent(nearest.name)}`,
+              latitude: nearest.latitude,
+              longitude: nearest.longitude,
+              title: nearest.name
+            }
+          ];
+        }
+      }
+
       return {
-        reply: replyText.trim(),
+        reply,
+        actions,
         model: model,
         provider: isGroq ? 'groq' : 'grok'
       };

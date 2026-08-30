@@ -481,38 +481,66 @@ class MockPilgrimRepository implements PilgrimRepository {
     String answer;
     String? targetRoute;
     String? actionText;
+    List<TilakAction> actions = [];
 
     if (lower.contains('palkhi') ||
         lower.contains('location') ||
         lower.contains('पालखी') ||
         lower.contains('स्थान')) {
       answer =
-          'Sant Dnyaneshwar Maharaj Palkhi is currently at Saswad (सासवड मुक्काम). The next stop is Jejuri.';
-      targetRoute = '/palkhi';
-      actionText = 'View Palkhi Route';
+          'राम कृष्ण हरी! 🚩 Sant Dnyaneshwar Maharaj Palkhi (पालखी) सध्या सासवड मुक्काम (Saswad Stay) येथे आहे. पुढील टप्पा: जेजुरी.';
+      actions = [
+        const TilakAction(
+          type: 'directions',
+          id: 'PLK-001',
+          label: '🧭 Start Navigation to Palkhi (0.2 km)',
+          targetRoute: '/map?lat=18.3411&lng=74.0305&title=Sant%20Dnyaneshwar%20Maharaj%20Palkhi',
+          latitude: 18.3411,
+          longitude: 74.0305,
+          title: 'Sant Dnyaneshwar Maharaj Palkhi',
+        ),
+      ];
     } else if (lower.contains('medical') ||
         lower.contains('doctor') ||
         lower.contains('वैद्यकीय') ||
         lower.contains('औषध')) {
       answer =
-          'The nearest medical facility is Saswad Central Medical Camp (SRV-MED-001) near Saswad Bus Stand. Open 24/7.';
-      targetRoute = '/services';
-      actionText = 'Show Medical Camps';
+          'राम कृष्ण हरी! 🚩 सासवड मध्यवर्ती केंद्रापासून (Saswad Center) सर्वात जवळील वैद्यकीय केंद्र (Medical Camp):\n\n📍 "Saswad Central Medical Camp"\n• अंतर: 0.2 किमी (Saswad Bus Stand)\n• स्थिती: Open 24/7\n\nथेट मार्ग शोधण्यासाठी खालील बटणावर क्लिक करा.';
+      actions = [
+        const TilakAction(
+          type: 'directions',
+          id: 'SRV-MED-001',
+          label: '🧭 Start Navigation (Saswad Central Medical Camp)',
+          targetRoute: '/map?lat=18.3430&lng=74.0320&title=Saswad%20Central%20Medical%20Camp',
+          latitude: 18.3430,
+          longitude: 74.0320,
+          title: 'Saswad Central Medical Camp',
+        ),
+      ];
     } else if (lower.contains('dindi') || lower.contains('दिंडी')) {
       answer =
-          'You are currently near Dindi No. 1 (Mauli Prasann) and Dindi No. 12 (Gyanoba Tukaram).';
+          'राम कृष्ण हरी! 🚩 सासवड येथे जवळील नोंदणीकृत दिंडी (Dindi): माउली प्रसन्न दिंडी क्र. १ (सासवड मुक्काम).';
       targetRoute = '/dindi';
       actionText = 'View Nearby Dindis';
     } else if (lower.contains('water') ||
         lower.contains('पाणी') ||
         lower.contains('जल')) {
       answer =
-          'Clean Jal Seva Tank 1 (SRV-WTR-002) is located at the Dive Ghat Exit Point.';
-      targetRoute = '/services';
-      actionText = 'Locate Water Points';
+          'राम कृष्ण हरी! 🚩 सासवड मध्यवर्ती केंद्रापासून (Saswad Center) सर्वात जवळील पिण्याचे पाणी केंद्र (Jal Seva Tank):\n\n📍 "Saswad Palkhi Water Camp"\n• अंतर: 0.1 किमी (Saswad Main Road)\n• स्थिती: Available\n\nथेट मार्ग शोधण्यासाठी खालील बटणावर क्लिक करा.';
+      actions = [
+        const TilakAction(
+          type: 'directions',
+          id: 'SRV-WTR-002',
+          label: '🧭 Start Navigation (Saswad Palkhi Water Camp)',
+          targetRoute: '/map?lat=18.3420&lng=74.0310&title=Saswad%20Palkhi%20Water%20Camp',
+          latitude: 18.3420,
+          longitude: 74.0310,
+          title: 'Saswad Palkhi Water Camp',
+        ),
+      ];
     } else {
       answer =
-          'राम कृष्ण हरी! 🚩 मी तिलक, आपला वारी मार्गदर्शक आहे. पालखी मार्ग, मुक्काम, वैद्यकीय मदत, पिण्याचे पाणी किंवा आपत्कालीन सेवांबाबत प्रश्न विचारा.';
+          'राम कृष्ण हरी! 🚩 मी तिलक, आपला वारी मार्गदर्शक आहे. सासवड मध्यवर्ती केंद्रावरून पिण्याचे पाणी, वैद्यकीय मदत, पालखी स्थान किंवा अन्नछत्राची माहिती आणि नेव्हिगेशन मिळवण्यासाठी विचारू शकता.';
     }
 
     return TilakChatMessage(
@@ -520,6 +548,7 @@ class MockPilgrimRepository implements PilgrimRepository {
       text: answer,
       isUser: false,
       timestamp: DateTime.now(),
+      actions: actions,
       targetRoute: targetRoute,
       suggestedActionText: actionText,
     );
